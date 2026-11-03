@@ -23,7 +23,7 @@ kc() {
     -schema-location '.schemas/{{.Group}}_{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' "$@"
 }
 
-for k in gitops/infrastructure/controllers gitops/infrastructure/configs gitops/monitoring gitops/policies/templates gitops/tenants; do
+for k in gitops/infrastructure/controllers gitops/infrastructure/configs gitops/monitoring gitops/monitoring/configs gitops/policies/templates gitops/tenants; do
   echo "--- $k"
   build "$k" | kc -
 done

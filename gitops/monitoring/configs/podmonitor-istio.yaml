@@ -1,0 +1,42 @@
+# Scrape every Istio sidecar and the gateway. With enablePrometheusMerge the
+# proxy serves Envoy and application metrics together on :15020, a port the
+# sidecar does not intercept, so scraping works with STRICT mTLS. The tenant
+# chart allows this port from the monitoring namespace (NetworkPolicy and
+# AuthorizationPolicy).
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: istio-proxies
+  namespace: monitoring
+  annotations:
+    # Prometheus templates use $labels / $1; keep Flux substitution away.
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  namespaceSelector:
+    any: true
+  selector:
+    matchExpressions:
+      - key: istio-prometheus-ignore
+        operator: DoesNotExist
+  podMetricsEndpoints:
+    - path: /stats/prometheus
+      interval: 30s
+      relabelings:
+        - action: keep
+          sourceLabels: [__meta_kubernetes_pod_container_name]
+          regex: istio-proxy
+        - action: keep
+          sourceLabels: [__meta_kubernetes_pod_annotationpresent_prometheus_io_scrape]
+        - action: replace
+          sourceLabels: [__meta_kubernetes_pod_annotation_prometheus_io_port, __meta_kubernetes_pod_ip]
+          regex: (\d+);((([0-9]+?)(\.|$)){4})
+          replacement: $2:$1
+          targetLabel: __address__
+        - action: labeldrop
+          regex: __meta_kubernetes_pod_label_(.+)
+        - action: replace
+          sourceLabels: [__meta_kubernetes_namespace]
+          targetLabel: namespace
+        - action: replace
+          sourceLabels: [__meta_kubernetes_pod_name]
+          targetLabel: pod

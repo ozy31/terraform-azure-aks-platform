@@ -133,6 +133,8 @@ gitops/
                           External Secrets, Gatekeeper, Gateway API CRDs
     configs/              ClusterIssuer, ClusterSecretStore, shared Gateway, mTLS, NodePools
   monitoring/             kube-prometheus-stack, Grafana admin from Key Vault
+    configs/              Istio PodMonitor, platform alert rules
+    tests/                promtool unit tests for the alerts
   policies/
     templates/            ConstraintTemplates, ExpansionTemplates, sync config
     constraints/          constraints applied to tenant namespaces
@@ -147,7 +149,7 @@ docs/runbooks/            onboarding, upgrades
 
 Flux applies the `gitops/` paths as separate Kustomizations with explicit
 ordering: `infra-controllers` → `infra-configs` and `policy-templates` →
-`policies` → `tenants`, and `monitoring` after `infra-configs`.
+`policies` → `tenants`, and `monitoring` → `monitoring-configs` after `infra-configs`.
 
 ## Design decisions
 
@@ -211,6 +213,7 @@ A few smaller choices:
 | `make tenants` | tenant name matches its directory, no hostname claimed twice, every `${VAR}` in `gitops/` is set by Terraform |
 | `make manifests` | kubeconform in strict mode against the pinned CRDs (Flux, Istio, Gateway API, cert-manager, External Secrets, Gatekeeper, Karpenter), with Flux variables resolved; the tenant chart rendered per tenant; every platform HelmRelease rendered with its exact chart version and values |
 | `make policies` | `gator verify` with allow and deny cases for every policy; the example workload must pass the real constraints, and a non-compliant Deployment must be denied through the ExpansionTemplates |
+| `make alerts` | `promtool` lint and unit tests for the platform alerts (Flux drift, Gatekeeper errors, certificate expiry, gateway 5xx per tenant, quota) |
 | `make lint shell security` | yamllint, shellcheck, trivy |
 
 ## Operations
@@ -223,6 +226,7 @@ A few smaller choices:
 | Team cannot deploy: `admission webhook "validation.gatekeeper.sh" denied` | The message names the policy and the field; the fix is in the team's manifest, or a reviewed change to the constraint |
 | Pods pending | `kubectl get nodeclaims` and the NAP events: NodePool limits, quota, or a zone without capacity |
 | Certificate not issued | `kubectl describe certificate -n istio-ingress wildcard`, then the cert-manager logs: the identity needs DNS Zone Contributor on the zone |
+| `TenantQuotaNearlyFull` / `GatewayHighErrorRate` | Carry a `tenant` label for routing to the owning team; quota changes go through the team's `tenant.yaml` |
 | Something in Git is not in the cluster | `flux get kustomizations` and `flux get helmreleases -A`: the first failing item blocks the ones that depend on it |
 
 ## License

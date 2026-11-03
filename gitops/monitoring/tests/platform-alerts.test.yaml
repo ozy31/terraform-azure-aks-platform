@@ -1,0 +1,119 @@
+# promtool unit tests for gitops/monitoring/configs/platform-alerts.yaml.
+# hack/test-alerts.sh extracts .spec from the PrometheusRule into rules.yaml.
+rule_files:
+  - rules.yaml
+
+evaluation_interval: 1m
+
+tests:
+  - name: flux resource stuck, suspended one ignored
+    interval: 1m
+    input_series:
+      - series: 'gotk_resource_info{customresource_kind="HelmRelease", exported_namespace="flux-system", name="tenant-checkout", ready="False", suspended="false"}'
+        values: '1x20'
+      - series: 'gotk_resource_info{customresource_kind="Kustomization", exported_namespace="flux-system", name="tenants", ready="False", suspended="true"}'
+        values: '1x20'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: FluxResourceNotReady
+        exp_alerts: []
+      - eval_time: 16m
+        alertname: FluxResourceNotReady
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              team: platform
+              customresource_kind: HelmRelease
+              exported_namespace: flux-system
+              name: tenant-checkout
+            exp_annotations:
+              summary: HelmRelease flux-system/tenant-checkout is not ready
+              description: "Git and the cluster have diverged for 15 minutes. Run: flux get helmreleases -A"
+
+  - name: gatekeeper errors block deployments
+    interval: 1m
+    input_series:
+      - series: 'gatekeeper_validation_request_count{admission_status="allow"}'
+        values: '0+60x20'
+      - series: 'gatekeeper_validation_request_count{admission_status="error"}'
+        values: '0+0x5 0+6x15'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: GatekeeperWebhookErrors
+        exp_alerts: []
+      - eval_time: 20m
+        alertname: GatekeeperWebhookErrors
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              team: platform
+            exp_annotations:
+              summary: Gatekeeper admission requests are failing
+              description: "100m admission requests/s return errors; with failurePolicy Fail, applies to tenant namespaces are rejected."
+
+  - name: certificate close to expiry
+    interval: 1m
+    input_series:
+      # Expiry 10 days after the start of the test.
+      - series: 'certmanager_certificate_expiration_timestamp_seconds{namespace="istio-ingress", name="wildcard"}'
+        values: '864000x150'
+      - series: 'certmanager_certificate_expiration_timestamp_seconds{namespace="istio-ingress", name="fresh"}'
+        values: '7776000x150'
+    alert_rule_test:
+      - eval_time: 2h
+        alertname: CertificateExpiringSoon
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              team: platform
+              namespace: istio-ingress
+              name: wildcard
+            exp_annotations:
+              summary: Certificate istio-ingress/wildcard expires in 9d 22h 0m 0s
+
+  - name: gateway 5xx ratio per tenant
+    interval: 1m
+    input_series:
+      - series: 'istio_requests_total{reporter="source", source_workload="public-istio", destination_service_namespace="checkout", response_code="200"}'
+        values: '0+90x20'
+      - series: 'istio_requests_total{reporter="source", source_workload="public-istio", destination_service_namespace="checkout", response_code="503"}'
+        values: '0+10x20'
+      - series: 'istio_requests_total{reporter="source", source_workload="public-istio", destination_service_namespace="loyalty", response_code="200"}'
+        values: '0+100x20'
+      - series: 'istio_requests_total{reporter="source", source_workload="public-istio", destination_service_namespace="loyalty", response_code="500"}'
+        values: '0+1x20'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: GatewayHighErrorRate
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              tenant: checkout
+              destination_service_namespace: checkout
+            exp_annotations:
+              summary: "checkout: 10% of requests through the gateway return 5xx"
+
+  - name: quota nearly full
+    interval: 1m
+    input_series:
+      - series: 'kube_resourcequota{namespace="checkout", resourcequota="tenant", resource="requests.cpu", type="used"}'
+        values: '38x40'
+      - series: 'kube_resourcequota{namespace="checkout", resourcequota="tenant", resource="requests.cpu", type="hard"}'
+        values: '40x40'
+      - series: 'kube_resourcequota{namespace="loyalty", resourcequota="tenant", resource="requests.cpu", type="used"}'
+        values: '2x40'
+      - series: 'kube_resourcequota{namespace="loyalty", resourcequota="tenant", resource="requests.cpu", type="hard"}'
+        values: '8x40'
+    alert_rule_test:
+      - eval_time: 35m
+        alertname: TenantQuotaNearlyFull
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              tenant: checkout
+              namespace: checkout
+              resourcequota: tenant
+              resource: requests.cpu
+            exp_annotations:
+              summary: checkout uses 95% of its requests.cpu quota
+              description: New pods will be rejected at 100%. Raise the quota in the team's tenant.yaml or scale down.

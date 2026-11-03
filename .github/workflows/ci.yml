@@ -18,6 +18,7 @@ env:
   KUBECONFORM_VERSION: "v0.8.0"
   KUSTOMIZE_VERSION: "v5.8.3"
   GATOR_VERSION: "v3.23.1"
+  PROMETHEUS_VERSION: "3.15.1"
 
 jobs:
   terraform:
@@ -90,6 +91,23 @@ jobs:
 
       - name: gatekeeper policy tests
         run: make policies
+
+  alerts:
+    name: alert rules (promtool)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: install promtool
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/bin"
+          curl -sfL "https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz" \
+            | tar -xz -C "$HOME/.local/bin" --strip-components=1 "prometheus-${PROMETHEUS_VERSION}.linux-amd64/promtool"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: check + unit tests
+        run: make alerts
 
   lint:
     name: yamllint + shellcheck

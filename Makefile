@@ -6,7 +6,7 @@ TF_DIRS := terraform/modules/network terraform/modules/aks terraform/modules/pla
            terraform/modules/tenant terraform/envs/prod terraform/bootstrap/github-oidc
 TF_TEST := terraform/modules/tenant terraform/envs/prod
 
-.PHONY: help terraform tftest tflint tenant tenants schemas render manifests policies lint shell security check clean
+.PHONY: help terraform tftest tflint tenant tenants schemas render manifests policies alerts lint shell security check clean
 
 help: ## Show this help
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -54,13 +54,16 @@ manifests: schemas render ## kubeconform every manifest, rendered chart and tena
 policies: ## gator verify the Gatekeeper policies
 	./hack/test-policies.sh
 
+alerts: ## promtool check + unit tests for the platform alert rules
+	./hack/test-alerts.sh
+
 lint: ## yamllint
 	yamllint -s .
 
 shell: ## shellcheck the scripts
 	shellcheck hack/*.sh
 
-check: terraform tftest tenants manifests policies lint shell ## Everything CI runs (except tflint and trivy)
+check: terraform tftest tenants manifests policies alerts lint shell ## Everything CI runs (except tflint and trivy)
 
 clean: ## Remove generated files and Terraform caches
 	rm -rf .schemas .rendered

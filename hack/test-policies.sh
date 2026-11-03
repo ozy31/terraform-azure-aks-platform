@@ -39,7 +39,8 @@ cp gitops/policies/templates/*.yaml "$policies/"
 rm "$policies/kustomization.yaml" "$policies/config.yaml"
 
 gt() {
-  gator test -f "$policies" -f "$cases/namespace-checkout.yaml" -f "$@" 2> >(grep -v 'is already defined' >&2)
+  # gator also reads stdin when it is not a terminal; give it nothing.
+  gator test -f "$policies" -f "$cases/namespace-checkout.yaml" -f "$@" </dev/null 2> >(grep -v 'is already defined' >&2)
 }
 
 for example in examples/*/; do

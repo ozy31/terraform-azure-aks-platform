@@ -10,3 +10,5 @@ https://raw.githubusercontent.com/open-policy-agent/gatekeeper/v3.23.1/charts/ga
 https://raw.githubusercontent.com/open-policy-agent/gatekeeper/v3.23.1/charts/gatekeeper/crds/expansiontemplate-customresourcedefinition.yaml
 https://raw.githubusercontent.com/Azure/karpenter-provider-azure/v1.14.5/pkg/apis/crds/karpenter.sh_nodepools.yaml
 https://raw.githubusercontent.com/Azure/karpenter-provider-azure/v1.14.5/pkg/apis/crds/karpenter.azure.com_aksnodeclasses.yaml
+https://raw.githubusercontent.com/prometheus-community/helm-charts/kube-prometheus-stack-92.17.1/charts/kube-prometheus-stack/charts/crds/crds/crd-podmonitors.yaml
+https://raw.githubusercontent.com/prometheus-community/helm-charts/kube-prometheus-stack-92.17.1/charts/kube-prometheus-stack/charts/crds/crds/crd-prometheusrules.yaml

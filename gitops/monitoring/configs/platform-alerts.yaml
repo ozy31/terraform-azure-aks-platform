@@ -1,0 +1,121 @@
+# Alerts for the platform itself and for tenant-facing symptoms. Tenant alerts
+# carry a "tenant" label so Alertmanager can route them to the owning team.
+# Unit tests: gitops/monitoring/tests (make alerts).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: platform
+  namespace: monitoring
+  annotations:
+    # Prometheus templates use $labels / $1; keep Flux substitution away.
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  groups:
+    - name: platform.gitops
+      rules:
+        - alert: FluxResourceNotReady
+          # gotk_resource_info comes from kube-state-metrics custom resource
+          # state (gitops/monitoring/kube-prometheus-stack.yaml).
+          expr: |
+            max by (customresource_kind, exported_namespace, name) (
+              gotk_resource_info{ready="False", suspended!="true"}
+            ) == 1
+          for: 15m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "{{ $labels.customresource_kind }} {{ $labels.exported_namespace }}/{{ $labels.name }} is not ready"
+            description: "Git and the cluster have diverged for 15 minutes. Run: flux get {{ $labels.customresource_kind | toLower }}s -A"
+
+    - name: platform.policy
+      rules:
+        - alert: GatekeeperWebhookErrors
+          # The webhook fails closed: errors mean deployments are blocked.
+          expr: sum(rate(gatekeeper_validation_request_count{admission_status="error"}[5m])) > 0
+          for: 10m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: Gatekeeper admission requests are failing
+            description: "{{ $value | humanize }} admission requests/s return errors; with failurePolicy Fail, applies to tenant namespaces are rejected."
+        - alert: GatekeeperDegraded
+          expr: |
+            kube_deployment_status_replicas_available{namespace="gatekeeper-system", deployment="gatekeeper-controller-manager"} < 2
+          for: 5m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: Fewer than two Gatekeeper webhook replicas are available
+
+    - name: platform.certificates
+      rules:
+        - alert: CertificateExpiringSoon
+          # cert-manager renews 30 days before expiry; 14 days left means
+          # renewal has been failing for two weeks.
+          expr: (certmanager_certificate_expiration_timestamp_seconds - time()) < 14 * 24 * 3600
+          for: 1h
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "Certificate {{ $labels.namespace }}/{{ $labels.name }} expires in {{ $value | humanizeDuration }}"
+        - alert: CertificateNotReady
+          expr: certmanager_certificate_ready_status{condition="False"} == 1
+          for: 30m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "Certificate {{ $labels.namespace }}/{{ $labels.name }} is not ready"
+
+    - name: platform.ingress
+      rules:
+        - alert: GatewayHighErrorRate
+          # Per tenant namespace, measured at the shared gateway.
+          expr: |
+            label_replace(
+              sum by (destination_service_namespace) (
+                rate(istio_requests_total{reporter="source", source_workload="public-istio", response_code=~"5.."}[5m])
+              )
+              /
+              sum by (destination_service_namespace) (
+                rate(istio_requests_total{reporter="source", source_workload="public-istio"}[5m])
+              ),
+              "tenant", "$1", "destination_service_namespace", "(.*)"
+            ) > 0.05
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.tenant }}: {{ $value | humanizePercentage }} of requests through the gateway return 5xx"
+
+    - name: platform.tenants
+      rules:
+        - alert: TenantQuotaNearlyFull
+          expr: |
+            label_replace(
+              kube_resourcequota{type="used", resource=~"requests.cpu|requests.memory|pods"}
+                / ignoring(type)
+              kube_resourcequota{type="hard", resource=~"requests.cpu|requests.memory|pods"},
+              "tenant", "$1", "namespace", "(.*)"
+            ) > 0.9
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.tenant }} uses {{ $value | humanizePercentage }} of its {{ $labels.resource }} quota"
+            description: New pods will be rejected at 100%. Raise the quota in the team's tenant.yaml or scale down.
+        - alert: PodsPendingTooLong
+          # Usually NodePool limits, a zone without capacity, or a pod that
+          # no VM size in the NodePool can fit.
+          expr: sum by (namespace) (kube_pod_status_phase{phase="Pending"}) > 0
+          for: 15m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "{{ $value }} pods pending for 15 minutes in {{ $labels.namespace }}"
+            description: "Check kubectl get nodeclaims and the Node Auto-Provisioning events."

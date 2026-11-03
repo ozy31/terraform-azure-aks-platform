@@ -29,12 +29,13 @@ locals {
   )
 
   flux_kustomizations = {
-    infra-controllers = { path = "./gitops/infrastructure/controllers", depends_on = [] }
-    infra-configs     = { path = "./gitops/infrastructure/configs", depends_on = ["infra-controllers"] }
-    monitoring        = { path = "./gitops/monitoring", depends_on = ["infra-configs"] }
-    policy-templates  = { path = "./gitops/policies/templates", depends_on = ["infra-controllers"] }
-    policies          = { path = "./gitops/policies/constraints", depends_on = ["policy-templates"] }
-    tenants           = { path = "./gitops/tenants", depends_on = ["infra-configs", "policies"] }
+    infra-controllers  = { path = "./gitops/infrastructure/controllers", depends_on = [] }
+    infra-configs      = { path = "./gitops/infrastructure/configs", depends_on = ["infra-controllers"] }
+    monitoring         = { path = "./gitops/monitoring", depends_on = ["infra-configs"] }
+    monitoring-configs = { path = "./gitops/monitoring/configs", depends_on = ["monitoring"] }
+    policy-templates   = { path = "./gitops/policies/templates", depends_on = ["infra-controllers"] }
+    policies           = { path = "./gitops/policies/constraints", depends_on = ["policy-templates"] }
+    tenants            = { path = "./gitops/tenants", depends_on = ["infra-configs", "policies"] }
   }
 }
 
