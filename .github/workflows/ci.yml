@@ -1,0 +1,121 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TERRAFORM_VERSION: "1.15.5"
+  TFLINT_VERSION: "v0.65.0"
+  KUBECONFORM_VERSION: "v0.8.0"
+  KUSTOMIZE_VERSION: "v5.8.3"
+  GATOR_VERSION: "v3.23.1"
+
+jobs:
+  terraform:
+    name: terraform (fmt, validate, test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: fmt + validate
+        run: make terraform
+
+      - name: terraform test (mocked providers)
+        run: make tftest
+
+  tflint:
+    name: tflint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/cache@v6
+        with:
+          path: ~/.tflint.d/plugins
+          key: tflint-${{ hashFiles('.tflint.hcl') }}
+
+      - uses: terraform-linters/setup-tflint@v6
+        with:
+          tflint_version: ${{ env.TFLINT_VERSION }}
+
+      - name: tflint
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: make tflint
+
+  gitops:
+    name: gitops (kubeconform, charts, policies)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: azure/setup-helm@v4
+
+      - uses: fluxcd/flux2/action@v2.10.0
+
+      - name: install kubeconform, kustomize, gator
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/bin"
+          curl -sfL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | tar -xz -C "$HOME/.local/bin" kubeconform
+          curl -sfL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" \
+            | tar -xz -C "$HOME/.local/bin" kustomize
+          curl -sfL "https://github.com/open-policy-agent/gatekeeper/releases/download/${GATOR_VERSION}/gator-${GATOR_VERSION}-linux-amd64.tar.gz" \
+            | tar -xz -C "$HOME/.local/bin" gator
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: versions
+        run: kubeconform -v && kustomize version && helm version --short && flux version --client && gator --version && yq --version
+
+      - name: tenant and Flux variable checks
+        run: make tenants
+
+      - name: kubeconform
+        run: make manifests
+
+      - name: gatekeeper policy tests
+        run: make policies
+
+  lint:
+    name: yamllint + shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: yamllint
+        run: make lint
+
+      - name: shellcheck
+        run: make shell
+
+  security:
+    name: trivy config scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: trivy config
+        # v0.36.0, pinned by commit SHA
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          scan-type: config
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          # Policy test cases are deliberately non-compliant pods.
+          skip-dirs: "**/.terraform,gitops/policies/tests"

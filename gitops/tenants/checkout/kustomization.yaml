@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: flux-system
+resources:
+  - helmrelease.yaml
+# tenant.yaml becomes the chart values. Terraform reads the same file.
+configMapGenerator:
+  - name: tenant-checkout
+    files:
+      - values.yaml=tenant.yaml
+generatorOptions:
+  disableNameSuffixHash: true
+  labels:
+    # helm-controller reconciles the release when the ConfigMap changes.
+    reconcile.fluxcd.io/watch: Enabled

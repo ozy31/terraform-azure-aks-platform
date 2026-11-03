@@ -1,0 +1,12 @@
+# CRDs the manifests in this repo are validated against. Keep the versions in
+# step with the HelmReleases in gitops/.
+https://github.com/fluxcd/flux2/releases/download/v2.10.0/install.yaml
+https://github.com/cert-manager/cert-manager/releases/download/v1.21.3/cert-manager.crds.yaml
+https://raw.githubusercontent.com/external-secrets/external-secrets/v2.14.0/deploy/crds/bundle.yaml
+https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.7.0/standard-install.yaml
+https://raw.githubusercontent.com/istio/istio/1.30.7/manifests/charts/base/files/crd-all.gen.yaml
+https://raw.githubusercontent.com/open-policy-agent/gatekeeper/v3.23.1/charts/gatekeeper/crds/config-customresourcedefinition.yaml
+https://raw.githubusercontent.com/open-policy-agent/gatekeeper/v3.23.1/charts/gatekeeper/crds/constrainttemplate-customresourcedefinition.yaml
+https://raw.githubusercontent.com/open-policy-agent/gatekeeper/v3.23.1/charts/gatekeeper/crds/expansiontemplate-customresourcedefinition.yaml
+https://raw.githubusercontent.com/Azure/karpenter-provider-azure/v1.14.5/pkg/apis/crds/karpenter.sh_nodepools.yaml
+https://raw.githubusercontent.com/Azure/karpenter-provider-azure/v1.14.5/pkg/apis/crds/karpenter.azure.com_aksnodeclasses.yaml

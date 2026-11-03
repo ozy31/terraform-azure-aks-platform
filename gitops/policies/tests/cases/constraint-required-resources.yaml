@@ -1,0 +1,16 @@
+# Copy of ../../constraints/constraints.yaml with Flux variables resolved;
+# hack/test-policies.sh fails if the two drift.
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: PlatformRequiredResources
+metadata:
+  name: tenant-required-resources
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: [Pod]
+    namespaceSelector:
+      matchExpressions:
+        - key: platform.example.io/tenant
+          operator: Exists

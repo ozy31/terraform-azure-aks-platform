@@ -1,0 +1,22 @@
+# Checkout team. Read by Terraform (Azure RBAC, workload identity, Key Vault)
+# and by charts/tenant (namespace, quota, network and mesh policy).
+name: checkout
+displayName: Checkout
+ownerGroupId: 2f1c9a54-7d3e-4b8a-9c61-0e5d4a3b2c10
+costCenter: CC-1042
+serviceAccounts:
+  - app
+  - worker
+keyVault: true
+hostnames:
+  - checkout.platform.example.co.uk
+  - pay.platform.example.co.uk
+quota:
+  requests.cpu: "40"
+  requests.memory: 80Gi
+  limits.memory: 160Gi
+  pods: "300"
+  services.loadbalancers: "0"
+  services.nodeports: "0"
+  persistentvolumeclaims: "20"
+  requests.storage: 500Gi

@@ -1,0 +1,61 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kube-prometheus-stack
+  namespace: flux-system
+spec:
+  interval: 30m
+  targetNamespace: monitoring
+  releaseName: kube-prometheus-stack
+  chart:
+    spec:
+      chart: kube-prometheus-stack
+      version: 92.17.1
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+  install:
+    crds: CreateReplace
+  upgrade:
+    crds: CreateReplace
+  values:
+    # AKS manages the control plane; these targets are not scrapeable.
+    kubeControllerManager:
+      enabled: false
+    kubeScheduler:
+      enabled: false
+    kubeEtcd:
+      enabled: false
+    kubeProxy:
+      enabled: false
+    prometheus:
+      prometheusSpec:
+        replicas: 2
+        retention: 15d
+        retentionSize: 90GB
+        # Pick up ServiceMonitors and rules from every namespace, so tenants
+        # can ship their own without platform changes.
+        serviceMonitorSelectorNilUsesHelmValues: false
+        podMonitorSelectorNilUsesHelmValues: false
+        ruleSelectorNilUsesHelmValues: false
+        storageSpec:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: managed-csi-premium
+              accessModes: [ReadWriteOnce]
+              resources:
+                requests:
+                  storage: 100Gi
+    alertmanager:
+      alertmanagerSpec:
+        replicas: 2
+    grafana:
+      admin:
+        existingSecret: grafana-admin
+        userKey: admin-user
+        passwordKey: admin-password
+      persistence:
+        enabled: false
+      sidecar:
+        dashboards:
+          searchNamespace: ALL

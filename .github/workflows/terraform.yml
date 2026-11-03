@@ -1,0 +1,78 @@
+name: terraform
+
+# Plan on pull requests with a read-only identity; apply on main through a
+# protected environment with the deploy identity. Both authenticate to Azure
+# with GitHub OIDC (terraform/bootstrap/github-oidc): no client secrets.
+# Jobs are skipped until the repository variables are configured.
+
+on:
+  pull_request:
+    paths: ["terraform/**", "gitops/tenants/**"]
+  push:
+    branches: [main]
+    paths: ["terraform/**", "gitops/tenants/**"]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: terraform-prod
+  cancel-in-progress: false
+
+env:
+  TERRAFORM_VERSION: "1.15.5"
+  ARM_USE_OIDC: "true"
+  ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  TF_IN_AUTOMATION: "true"
+  WORKDIR: terraform/envs/prod
+
+jobs:
+  plan:
+    if: github.event_name == 'pull_request' && vars.AZURE_CLIENT_ID_PLAN != ''
+    runs-on: ubuntu-latest
+    env:
+      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID_PLAN }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: init
+        run: terraform -chdir="$WORKDIR" init -input=false -backend-config=backend.hcl
+
+      - name: plan
+        run: |
+          set -euo pipefail
+          terraform -chdir="$WORKDIR" plan -input=false -lock=false -no-color -out=tfplan | tee plan.txt
+          {
+            echo '### terraform plan (prod)'
+            echo '```'
+            grep -E '^(Plan:|No changes)' plan.txt || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  apply:
+    if: github.event_name == 'push' && vars.AZURE_CLIENT_ID_APPLY != ''
+    runs-on: ubuntu-latest
+    # Required reviewers are configured on the environment.
+    environment: prod
+    env:
+      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID_APPLY }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: init
+        run: terraform -chdir="$WORKDIR" init -input=false -backend-config=backend.hcl
+
+      - name: apply
+        run: terraform -chdir="$WORKDIR" apply -input=false -auto-approve

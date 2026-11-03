@@ -1,0 +1,91 @@
+# Node Auto-Provisioning (Karpenter on AKS). The system pool only runs critical
+# add-ons; everything else lands on nodes these NodePools create.
+apiVersion: karpenter.azure.com/v1beta1
+kind: AKSNodeClass
+metadata:
+  name: default
+spec:
+  imageFamily: AzureLinux
+  osDiskSizeGB: 128
+---
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: general
+spec:
+  template:
+    metadata:
+      labels:
+        platform.example.io/pool: general
+    spec:
+      nodeClassRef:
+        group: karpenter.azure.com
+        kind: AKSNodeClass
+        name: default
+      expireAfter: 720h
+      requirements:
+        - key: karpenter.azure.com/sku-family
+          operator: In
+          values: [D, E]
+        - key: karpenter.azure.com/sku-cpu
+          operator: In
+          values: ["4", "8", "16"]
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: [on-demand]
+        - key: kubernetes.io/arch
+          operator: In
+          values: [amd64]
+        - key: topology.kubernetes.io/zone
+          operator: In
+          values: [uksouth-1, uksouth-2, uksouth-3]
+  limits:
+    cpu: "512"
+    memory: 2048Gi
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 5m
+    budgets:
+      # At most 10% of nodes disrupted at once...
+      - nodes: "10%"
+      # ...and no voluntary consolidation during UK trading hours.
+      - nodes: "0"
+        reasons: [Underutilized]
+        schedule: "0 8 * * mon-fri"
+        duration: 10h
+---
+# Spot capacity for interruptible work (batch, CI runners). Tainted, so only
+# pods that tolerate eviction land here.
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: spot
+spec:
+  template:
+    metadata:
+      labels:
+        platform.example.io/pool: spot
+    spec:
+      nodeClassRef:
+        group: karpenter.azure.com
+        kind: AKSNodeClass
+        name: default
+      taints:
+        - key: platform.example.io/spot
+          effect: NoSchedule
+      expireAfter: 168h
+      requirements:
+        - key: karpenter.azure.com/sku-family
+          operator: In
+          values: [D, E, F]
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: [spot]
+        - key: kubernetes.io/arch
+          operator: In
+          values: [amd64]
+  limits:
+    cpu: "256"
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 1m

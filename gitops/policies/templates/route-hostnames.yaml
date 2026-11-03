@@ -1,0 +1,43 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: platformroutehostnames
+  annotations:
+    description: >-
+      HTTPRoute hostnames must be in the list the tenant declared in its
+      tenant.yaml (stored as a namespace annotation by the tenant chart), so
+      one team cannot take over another team's hostname.
+    metadata.gatekeeper.sh/requires-sync-data: |
+      "[[{\"groups\": [\"\"], \"versions\": [\"v1\"], \"kinds\": [\"Namespace\"]}]]"
+spec:
+  crd:
+    spec:
+      names:
+        kind: PlatformRouteHostnames
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package platformroutehostnames
+
+        import future.keywords.contains
+        import future.keywords.if
+        import future.keywords.in
+
+        annotation := "platform.example.io/allowed-hostnames"
+
+        allowed contains h if {
+          ns := data.inventory.cluster.v1.Namespace[input.review.object.metadata.namespace]
+          some h in split(ns.metadata.annotations[annotation], ",")
+          h != ""
+        }
+
+        violation contains {"msg": msg} if {
+          some h in input.review.object.spec.hostnames
+          not h in allowed
+          msg := sprintf("hostname <%v> is not allowed for namespace <%v>; add it to the tenant's hostnames in tenant.yaml", [h, input.review.object.metadata.namespace])
+        }
+
+        violation contains {"msg": msg} if {
+          not input.review.object.spec.hostnames
+          msg := "HTTPRoute must set spec.hostnames"
+        }

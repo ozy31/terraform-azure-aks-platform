@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: loyalty
+  labels:
+    platform.example.io/tenant: loyalty
+  annotations:
+    platform.example.io/allowed-hostnames: nectar.platform.example.co.uk

@@ -1,0 +1,10 @@
+# Loyalty team.
+name: loyalty
+displayName: Loyalty
+ownerGroupId: 8a6d2e17-3b4f-4c59-a8e0-71f2c9d4b356
+costCenter: CC-2210
+serviceAccounts:
+  - app
+keyVault: true
+hostnames:
+  - nectar.platform.example.co.uk

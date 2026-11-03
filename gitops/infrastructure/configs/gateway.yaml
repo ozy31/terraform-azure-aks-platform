@@ -1,0 +1,107 @@
+# One shared public Gateway. Istio provisions the gateway Deployment and the
+# Azure load balancer from this object. Tenants attach HTTPRoutes from their
+# own namespaces; Gatekeeper checks route hostnames against the tenant's list.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard
+  namespace: istio-ingress
+spec:
+  secretName: wildcard-tls
+  dnsNames:
+    - ${DNS_ZONE_NAME}
+    - "*.${DNS_ZONE_NAME}"
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt
+  privateKey:
+    algorithm: ECDSA
+    rotationPolicy: Always
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: public
+  namespace: istio-ingress
+spec:
+  gatewayClassName: istio
+  infrastructure:
+    labels:
+      istio.io/rev: stable
+    annotations:
+      # Azure LB health probes on the Istio readiness port instead of the
+      # listener ports, so a draining gateway pod leaves rotation first.
+      service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path: /healthz/ready
+      service.beta.kubernetes.io/port_80_health-probe_port: "15021"
+      service.beta.kubernetes.io/port_443_health-probe_port: "15021"
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: https
+      protocol: HTTPS
+      port: 443
+      hostname: "*.${DNS_ZONE_NAME}"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: wildcard-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchExpressions:
+              - key: platform.example.io/tenant
+                operator: Exists
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: https-redirect
+  namespace: istio-ingress
+spec:
+  parentRefs:
+    - name: public
+      sectionName: http
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301
+---
+# Keep at least two gateway pods during node drains and upgrades.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: public-istio
+  namespace: istio-ingress
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: public-istio
+  minReplicas: 3
+  maxReplicas: 12
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: public-istio
+  namespace: istio-ingress
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      gateway.networking.k8s.io/gateway-name: public

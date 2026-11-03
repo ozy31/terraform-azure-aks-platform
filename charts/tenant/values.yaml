@@ -1,0 +1,41 @@
+# Keys from gitops/tenants/<name>/tenant.yaml (shared with Terraform).
+name: ""
+displayName: ""
+ownerGroupId: ""
+costCenter: ""
+serviceAccounts:
+  - app
+keyVault: true
+hostnames: []
+quota:
+  requests.cpu: "8"
+  requests.memory: 16Gi
+  limits.memory: 32Gi
+  pods: "100"
+  services.loadbalancers: "0"
+  services.nodeports: "0"
+  persistentvolumeclaims: "10"
+  requests.storage: 200Gi
+
+# Defaults applied to containers that omit them (Gatekeeper still requires
+# explicit values on admission; these protect pods created before policies).
+limitRange:
+  defaultRequest:
+    cpu: 100m
+    memory: 128Mi
+  default:
+    memory: 256Mi
+  max:
+    cpu: "4"
+    memory: 16Gi
+
+# Injected by the HelmRelease from Terraform outputs (Flux substitution).
+azure:
+  tenantId: ""
+  workloadClientId: ""
+  keyVaultUri: ""
+
+platform:
+  istioRevision: stable
+  gatewayNamespace: istio-ingress
+  podSecurity: baseline

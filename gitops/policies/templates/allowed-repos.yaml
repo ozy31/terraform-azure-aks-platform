@@ -1,0 +1,70 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: platformallowedrepos
+  annotations:
+    description: >-
+      Containers must use images from approved registries and must be pinned
+      to a version tag or digest (no implicit or explicit "latest").
+spec:
+  crd:
+    spec:
+      names:
+        kind: PlatformAllowedRepos
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            repos:
+              description: Allowed image prefixes, including the trailing slash.
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package platformallowedrepos
+
+        import future.keywords.contains
+        import future.keywords.if
+        import future.keywords.in
+
+        containers contains c if {
+          some c in input.review.object.spec.containers
+        }
+
+        containers contains c if {
+          some c in input.review.object.spec.initContainers
+        }
+
+        containers contains c if {
+          some c in input.review.object.spec.ephemeralContainers
+        }
+
+        violation contains {"msg": msg} if {
+          some c in containers
+          not approved(c.image)
+          msg := sprintf("container <%v> uses image <%v>; allowed registries: %v", [c.name, c.image, input.parameters.repos])
+        }
+
+        violation contains {"msg": msg} if {
+          some c in containers
+          not pinned(c.image)
+          msg := sprintf("container <%v> image <%v> must be pinned to a version tag or digest, not latest", [c.name, c.image])
+        }
+
+        approved(image) if {
+          some prefix in input.parameters.repos
+          startswith(image, prefix)
+        }
+
+        pinned(image) if contains(image, "@sha256:")
+
+        pinned(image) if {
+          not contains(image, "@")
+          parts := split(image, "/")
+          name := parts[count(parts) - 1]
+          contains(name, ":")
+          tag := split(name, ":")[1]
+          tag != "latest"
+        }

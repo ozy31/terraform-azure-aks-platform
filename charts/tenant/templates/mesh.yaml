@@ -1,0 +1,24 @@
+# Only the shared gateway and workloads in this namespace may call services
+# here. Cross-tenant calls need an explicit AuthorizationPolicy from the owner.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-gateway-and-namespace
+  namespace: {{ .Values.name }}
+  labels:
+    {{- include "tenant.labels" . | nindent 4 }}
+spec:
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            namespaces:
+              - {{ .Values.name }}
+              - {{ .Values.platform.gatewayNamespace }}
+    - from:
+        - source:
+            namespaces:
+              - monitoring
+      to:
+        - operation:
+            ports: ["15020"]

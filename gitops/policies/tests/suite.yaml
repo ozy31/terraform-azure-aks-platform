@@ -1,0 +1,86 @@
+# gator verify: run with hack/test-policies.sh, which substitutes the Flux
+# variables (ACR_LOGIN_SERVER=acrtest.azurecr.io) before testing.
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: platform-policies
+tests:
+  - name: allowed-repos
+    template: ../templates/allowed-repos.yaml
+    constraint: cases/constraint-allowed-repos.yaml
+    cases:
+      - name: acr-image-with-tag
+        object: cases/pod-good.yaml
+        inventory: [cases/namespace-checkout.yaml]
+        assertions:
+          - violations: "no"
+      - name: docker-hub-image
+        object: cases/pod-dockerhub.yaml
+        inventory: [cases/namespace-checkout.yaml]
+        assertions:
+          - violations: 1
+            message: allowed registries
+      - name: latest-and-untagged
+        object: cases/pod-latest.yaml
+        inventory: [cases/namespace-checkout.yaml]
+        assertions:
+          - violations: 2
+            message: must be pinned
+      - name: digest-is-pinned
+        object: cases/pod-digest.yaml
+        inventory: [cases/namespace-checkout.yaml]
+        assertions:
+          - violations: "no"
+      - name: platform-namespace-not-matched
+        object: cases/pod-platform-ns.yaml
+        inventory: [cases/namespace-monitoring.yaml]
+        assertions:
+          - violations: "no"
+  - name: required-resources
+    template: ../templates/required-resources.yaml
+    constraint: cases/constraint-required-resources.yaml
+    cases:
+      - name: complete
+        object: cases/pod-good.yaml
+        inventory: [cases/namespace-checkout.yaml]
+        assertions:
+          - violations: "no"
+      - name: missing-requests-and-limits
+        object: cases/pod-no-resources.yaml
+        inventory: [cases/namespace-checkout.yaml]
+        assertions:
+          - violations: 3
+  - name: block-service-types
+    template: ../templates/block-service-types.yaml
+    constraint: cases/constraint-block-service-types.yaml
+    cases:
+      - name: cluster-ip
+        object: cases/service-clusterip.yaml
+        inventory: [cases/namespace-checkout.yaml]
+        assertions:
+          - violations: "no"
+      - name: load-balancer
+        object: cases/service-lb.yaml
+        inventory: [cases/namespace-checkout.yaml]
+        assertions:
+          - violations: 1
+  - name: route-hostnames
+    template: ../templates/route-hostnames.yaml
+    constraint: cases/constraint-route-hostnames.yaml
+    cases:
+      - name: own-hostname
+        object: cases/route-own.yaml
+        inventory: [cases/namespace-checkout.yaml, cases/namespace-loyalty.yaml]
+        assertions:
+          - violations: "no"
+      - name: other-tenants-hostname
+        object: cases/route-hijack.yaml
+        inventory: [cases/namespace-checkout.yaml, cases/namespace-loyalty.yaml]
+        assertions:
+          - violations: 1
+            message: not allowed for namespace
+      - name: no-hostnames
+        object: cases/route-no-hostnames.yaml
+        inventory: [cases/namespace-checkout.yaml]
+        assertions:
+          - violations: 1

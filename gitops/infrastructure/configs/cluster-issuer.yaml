@@ -1,0 +1,21 @@
+# DNS-01 against Azure DNS with workload identity: wildcard certificates, no
+# HTTP-01 solver pods, no credentials in the cluster.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: ${ACME_EMAIL}
+    privateKeySecretRef:
+      name: letsencrypt-account
+    solvers:
+      - dns01:
+          azureDNS:
+            environment: AzurePublicCloud
+            subscriptionID: ${AZURE_SUBSCRIPTION_ID}
+            resourceGroupName: ${DNS_RESOURCE_GROUP}
+            hostedZoneName: ${DNS_ZONE_NAME}
+            managedIdentity:
+              clientID: ${CERT_MANAGER_CLIENT_ID}

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: digest
+  namespace: checkout
+spec:
+  containers:
+    - name: api
+      image: acrtest.azurecr.io/checkout/api@sha256:0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0
+      resources:
+        requests: {cpu: 100m, memory: 128Mi}
+        limits: {memory: 256Mi}

@@ -1,0 +1,35 @@
+# Evaluate pod policies against the pod template of workload controllers, so a
+# bad Deployment is rejected at apply time instead of failing silently when
+# its ReplicaSet tries to create pods.
+apiVersion: expansion.gatekeeper.sh/v1beta1
+kind: ExpansionTemplate
+metadata:
+  name: expand-workloads
+spec:
+  applyTo:
+    - groups: [apps]
+      kinds: [Deployment, StatefulSet, DaemonSet, ReplicaSet]
+      versions: [v1]
+    - groups: [batch]
+      kinds: [Job]
+      versions: [v1]
+  templateSource: spec.template
+  generatedGVK:
+    group: ""
+    version: v1
+    kind: Pod
+---
+apiVersion: expansion.gatekeeper.sh/v1beta1
+kind: ExpansionTemplate
+metadata:
+  name: expand-cronjobs
+spec:
+  applyTo:
+    - groups: [batch]
+      kinds: [CronJob]
+      versions: [v1]
+  templateSource: spec.jobTemplate.spec.template
+  generatedGVK:
+    group: ""
+    version: v1
+    kind: Pod

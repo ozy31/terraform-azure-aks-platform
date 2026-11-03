@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.name }}
+  labels:
+    {{- include "tenant.labels" . | nindent 4 }}
+    platform.example.io/cost-center: {{ .Values.costCenter | quote }}
+    istio.io/rev: {{ .Values.platform.istioRevision }}
+    pod-security.kubernetes.io/enforce: {{ .Values.platform.podSecurity }}
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted
+  annotations:
+    # Removing a tenant must be deliberate: deleting the namespace deletes the
+    # team's workloads and volumes, so Helm leaves it in place on uninstall.
+    helm.sh/resource-policy: keep
+    platform.example.io/display-name: {{ .Values.displayName | quote }}
+    platform.example.io/owner-group: {{ .Values.ownerGroupId | quote }}
+    # Read by the Gatekeeper route-hostnames policy.
+    platform.example.io/allowed-hostnames: {{ join "," .Values.hostnames | quote }}

@@ -1,0 +1,61 @@
+# Platform namespaces with Pod Security Admission levels. The Istio CNI node
+# agent (istio-system) is the only privileged component: it sets up traffic
+# redirection on the node, so injected pods need no NET_ADMIN init container
+# and tenant namespaces can enforce "baseline" and warn on "restricted".
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cert-manager
+  labels:
+    platform.example.io/managed-by: platform-team
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: external-dns
+  labels:
+    platform.example.io/managed-by: platform-team
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: external-secrets
+  labels:
+    platform.example.io/managed-by: platform-team
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gatekeeper-system
+  labels:
+    platform.example.io/managed-by: platform-team
+    admission.gatekeeper.sh/ignore: no-self-managing
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: istio-system
+  labels:
+    platform.example.io/managed-by: platform-team
+    pod-security.kubernetes.io/enforce: privileged
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: istio-ingress
+  labels:
+    platform.example.io/managed-by: platform-team
+    istio.io/rev: stable
+    pod-security.kubernetes.io/enforce: baseline
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    platform.example.io/managed-by: platform-team
+    pod-security.kubernetes.io/enforce: baseline

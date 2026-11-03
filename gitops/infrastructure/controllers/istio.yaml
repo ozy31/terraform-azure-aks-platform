@@ -1,0 +1,95 @@
+# Upstream Istio, installed by revision. Workloads select the "stable" revision
+# tag (istio.io/rev=stable), so an upgrade installs istiod for the new revision
+# next to the old one, moves the tag, and restarts namespaces one at a time
+# (docs/runbooks/upgrades.md).
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: istio-base
+  namespace: flux-system
+spec:
+  interval: 30m
+  targetNamespace: istio-system
+  releaseName: istio-base
+  chart:
+    spec:
+      chart: base
+      version: 1.30.7
+      sourceRef:
+        kind: HelmRepository
+        name: istio
+  values:
+    defaultRevision: ""
+---
+# Node agent that redirects pod traffic into the sidecar, chained after the
+# AKS-managed Cilium CNI. Injected pods then need no privileged init container.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: istio-cni
+  namespace: flux-system
+spec:
+  interval: 30m
+  targetNamespace: istio-system
+  releaseName: istio-cni
+  dependsOn:
+    - name: istio-base
+  chart:
+    spec:
+      chart: cni
+      version: 1.30.7
+      sourceRef:
+        kind: HelmRepository
+        name: istio
+  values:
+    chained: true
+    cniBinDir: /opt/cni/bin
+    cniConfDir: /etc/cni/net.d
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: istiod-1-30
+  namespace: flux-system
+spec:
+  interval: 30m
+  targetNamespace: istio-system
+  releaseName: istiod-1-30
+  dependsOn:
+    - name: istio-base
+    - name: istio-cni
+    - name: gateway-api-crds
+  chart:
+    spec:
+      chart: istiod
+      version: 1.30.7
+      sourceRef:
+        kind: HelmRepository
+        name: istio
+  values:
+    revision: 1-30
+    revisionTags:
+      - stable
+    autoscaleEnabled: true
+    autoscaleMin: 2
+    autoscaleMax: 5
+    resources:
+      requests:
+        cpu: 500m
+        memory: 2Gi
+    cni:
+      enabled: true
+    meshConfig:
+      accessLogFile: /dev/stdout
+      accessLogEncoding: JSON
+      enablePrometheusMerge: true
+      defaultConfig:
+        holdApplicationUntilProxyStarts: true
+    global:
+      proxy:
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            memory: 512Mi

@@ -1,0 +1,64 @@
+# external-dns reads azure.json for the zone location; authentication is
+# workload identity, so the file holds no credentials.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: external-dns-azure
+  namespace: external-dns
+type: Opaque
+stringData:
+  azure.json: |
+    {
+      "tenantId": "${AZURE_TENANT_ID}",
+      "subscriptionId": "${AZURE_SUBSCRIPTION_ID}",
+      "resourceGroup": "${DNS_RESOURCE_GROUP}",
+      "useWorkloadIdentityExtension": true
+    }
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: external-dns
+  namespace: flux-system
+spec:
+  interval: 30m
+  targetNamespace: external-dns
+  releaseName: external-dns
+  dependsOn:
+    - name: gateway-api-crds
+  chart:
+    spec:
+      chart: external-dns
+      version: 1.23.0
+      sourceRef:
+        kind: HelmRepository
+        name: external-dns
+  values:
+    provider:
+      name: azure
+    sources:
+      - gateway-httproute
+      - service
+    domainFilters:
+      - ${DNS_ZONE_NAME}
+    # sync deletes records it owns when routes are removed; the TXT owner ID
+    # stops two clusters from fighting over the same zone.
+    policy: sync
+    txtOwnerId: ${CLUSTER_NAME}
+    podLabels:
+      azure.workload.identity/use: "true"
+    serviceAccount:
+      labels:
+        azure.workload.identity/use: "true"
+      annotations:
+        azure.workload.identity/client-id: ${EXTERNAL_DNS_CLIENT_ID}
+    extraVolumes:
+      - name: azure-config
+        secret:
+          secretName: external-dns-azure
+    extraVolumeMounts:
+      - name: azure-config
+        mountPath: /etc/kubernetes
+        readOnly: true
+    serviceMonitor:
+      enabled: true

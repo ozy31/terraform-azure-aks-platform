@@ -1,0 +1,13 @@
+# Replicate Namespaces into Gatekeeper's cache so policies can read namespace
+# metadata (the tenant's allowed hostnames) when evaluating other objects.
+apiVersion: config.gatekeeper.sh/v1alpha1
+kind: Config
+metadata:
+  name: config
+  namespace: gatekeeper-system
+spec:
+  sync:
+    syncOnly:
+      - group: ""
+        version: v1
+        kind: Namespace

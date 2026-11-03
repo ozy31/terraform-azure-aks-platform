@@ -1,0 +1,67 @@
+# All constraints apply to tenant namespaces only (labelled by the tenant
+# chart). Platform namespaces are governed by code review instead.
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: PlatformAllowedRepos
+metadata:
+  name: tenant-allowed-repos
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: [Pod]
+    namespaceSelector:
+      matchExpressions:
+        - key: platform.example.io/tenant
+          operator: Exists
+  parameters:
+    repos:
+      - ${ACR_LOGIN_SERVER}/
+      - mcr.microsoft.com/
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: PlatformRequiredResources
+metadata:
+  name: tenant-required-resources
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: [Pod]
+    namespaceSelector:
+      matchExpressions:
+        - key: platform.example.io/tenant
+          operator: Exists
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: PlatformBlockServiceTypes
+metadata:
+  name: tenant-block-service-types
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: [Service]
+    namespaceSelector:
+      matchExpressions:
+        - key: platform.example.io/tenant
+          operator: Exists
+  parameters:
+    types: [LoadBalancer, NodePort]
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: PlatformRouteHostnames
+metadata:
+  name: tenant-route-hostnames
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups: [gateway.networking.k8s.io]
+        kinds: [HTTPRoute]
+    namespaceSelector:
+      matchExpressions:
+        - key: platform.example.io/tenant
+          operator: Exists

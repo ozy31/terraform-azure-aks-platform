@@ -1,0 +1,16 @@
+# Copy of ../../constraints/constraints.yaml with Flux variables resolved;
+# hack/test-policies.sh fails if the two drift.
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: PlatformRouteHostnames
+metadata:
+  name: tenant-route-hostnames
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups: [gateway.networking.k8s.io]
+        kinds: [HTTPRoute]
+    namespaceSelector:
+      matchExpressions:
+        - key: platform.example.io/tenant
+          operator: Exists
