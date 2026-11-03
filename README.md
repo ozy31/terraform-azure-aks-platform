@@ -113,7 +113,8 @@ What the platform enforces (Gatekeeper, tested with `gator`):
 
 Workload controllers are expanded (ExpansionTemplates), so a Deployment that
 breaks a pod policy is rejected at `kubectl apply`, not when its ReplicaSet
-fails later.
+fails later. [`examples/checkout-api`](examples/checkout-api) is a workload
+that passes all of them, checked in CI.
 
 ## Repository layout
 
@@ -138,6 +139,7 @@ gitops/
     tests/                gator suite with allow and deny cases
   tenants/<team>/         tenant.yaml + HelmRelease of charts/tenant
 charts/tenant/            namespace guardrails, with a JSON schema for its values
+examples/checkout-api/    what a team deploys: Deployment, HTTPRoute, ExternalSecret, PDB
 hack/                     validation scripts used by make and CI
 docs/adr/                 architecture decision records
 docs/runbooks/            onboarding, upgrades
@@ -208,7 +210,7 @@ A few smaller choices:
 | `make tflint` | tflint with the azurerm ruleset |
 | `make tenants` | tenant name matches its directory, no hostname claimed twice, every `${VAR}` in `gitops/` is set by Terraform |
 | `make manifests` | kubeconform in strict mode against the pinned CRDs (Flux, Istio, Gateway API, cert-manager, External Secrets, Gatekeeper, Karpenter), with Flux variables resolved; the tenant chart rendered per tenant; every platform HelmRelease rendered with its exact chart version and values |
-| `make policies` | `gator verify` with allow and deny cases for every policy |
+| `make policies` | `gator verify` with allow and deny cases for every policy; the example workload must pass the real constraints, and a non-compliant Deployment must be denied through the ExpansionTemplates |
 | `make lint shell security` | yamllint, shellcheck, trivy |
 
 ## Operations

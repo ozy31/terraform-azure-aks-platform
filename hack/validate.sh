@@ -33,6 +33,11 @@ done
 echo "--- gitops/policies/constraints"
 build gitops/policies/constraints | kc -ignore-missing-schemas -
 
+for example in examples/*/; do
+  echo "--- $example"
+  build "$example" | kc -
+done
+
 echo "--- rendered tenant chart"
 kc .rendered/tenants
 

@@ -1,0 +1,20 @@
+# Breaks three policies. Gatekeeper must reject it at the Deployment level
+# (ExpansionTemplate), not only when the ReplicaSet creates pods.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bad
+  namespace: checkout
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bad
+  template:
+    metadata:
+      labels:
+        app: bad
+    spec:
+      containers:
+        - name: web
+          image: nginx:latest

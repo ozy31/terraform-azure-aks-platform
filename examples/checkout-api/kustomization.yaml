@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# What a team deploys into its namespace (normally from the team's own repo).
+# CI checks it against the schemas and the platform policies, so this is also
+# the reference for "what passes".
+namespace: checkout
+resources:
+  - external-secret.yaml
+  - deployment.yaml
+  - service.yaml
+  - httproute.yaml
+  - pdb.yaml
