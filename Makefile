@@ -6,7 +6,7 @@ TF_DIRS := terraform/modules/network terraform/modules/aks terraform/modules/pla
            terraform/modules/tenant terraform/envs/prod terraform/bootstrap/github-oidc
 TF_TEST := terraform/modules/tenant terraform/envs/prod
 
-.PHONY: help terraform tftest tflint tenants schemas render manifests policies lint shell security check clean
+.PHONY: help terraform tftest tflint tenant tenants schemas render manifests policies lint shell security check clean
 
 help: ## Show this help
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -32,6 +32,9 @@ tflint: ## tflint with the azurerm ruleset
 		echo "==> $$d"; \
 		tflint --chdir=$$d --config=$(CURDIR)/.tflint.hcl; \
 	done
+
+tenant: ## Scaffold a tenant: make tenant NAME=returns GROUP=<entra-group-id> COST=CC-1234 HOSTS="returns.example.co.uk"
+	./hack/new-tenant.sh "$(NAME)" "$(GROUP)" "$(COST)" $(HOSTS)
 
 tenants: ## Cross-checks between tenant.yaml files, Flux variables and Terraform
 	./hack/check-tenants.sh

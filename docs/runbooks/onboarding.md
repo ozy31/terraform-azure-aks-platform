@@ -5,14 +5,17 @@ the next Flux reconcile).
 
 ## 1. Pull request
 
-Copy an existing tenant and edit it:
+Scaffold the tenant:
 
 ```bash
-cp -r gitops/tenants/loyalty gitops/tenants/returns
-$EDITOR gitops/tenants/returns/tenant.yaml
-sed -i 's/loyalty/returns/g; s/LOYALTY/RETURNS/g' gitops/tenants/returns/{kustomization,helmrelease}.yaml
-yq -i '.resources += ["returns"]' gitops/tenants/kustomization.yaml
+make tenant NAME=returns GROUP=<entra-group-object-id> COST=CC-3105 \
+  HOSTS="returns.platform.example.co.uk"
 ```
+
+This writes `gitops/tenants/returns/` (`tenant.yaml`, `kustomization.yaml`,
+`helmrelease.yaml`), lists it in `gitops/tenants/kustomization.yaml` and adds
+sample Flux values to `hack/flux-vars.env` so CI can validate it. Then adjust
+`tenant.yaml` (quota, extra service accounts).
 
 `tenant.yaml`:
 

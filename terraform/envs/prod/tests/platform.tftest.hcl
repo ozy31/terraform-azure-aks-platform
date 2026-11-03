@@ -77,7 +77,9 @@ run "every_tenant_directory_is_onboarded" {
   command = apply
 
   assert {
-    condition     = toset(keys(module.tenant)) == toset(["checkout", "loyalty"])
+    condition = toset(keys(module.tenant)) == toset([
+      for f in fileset("${path.module}/../../../gitops/tenants", "*/tenant.yaml") : dirname(f)
+    ])
     error_message = "Each gitops/tenants/<name>/tenant.yaml must produce one tenant module instance."
   }
 
