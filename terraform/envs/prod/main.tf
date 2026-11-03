@@ -78,6 +78,10 @@ resource "azurerm_key_vault" "platform" {
     virtual_network_subnet_ids = [module.network.node_subnet_id]
     ip_rules                   = var.authorized_ip_ranges
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "azurerm_role_assignment" "platform_kv_admins" {
