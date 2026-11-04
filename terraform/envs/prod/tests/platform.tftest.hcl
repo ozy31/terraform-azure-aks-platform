@@ -66,6 +66,12 @@ mock_provider "azurerm" {
     }
   }
 
+  mock_data "azurerm_policy_definition" {
+    defaults = {
+      id = "/providers/Microsoft.Authorization/policyDefinitions/e56962a6-4747-49cd-b67b-bf8b01975c4c"
+    }
+  }
+
   mock_resource "azurerm_private_dns_zone" {
     defaults = {
       id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-plat-prod-uks/providers/Microsoft.Network/privateDnsZones/privatelink.vaultcore.azure.net"
@@ -155,5 +161,19 @@ run "audit_logs_are_collected" {
   assert {
     condition     = azurerm_monitor_diagnostic_setting.aks.log_analytics_destination_type == "Dedicated"
     error_message = "AKS logs go to resource-specific tables (AKSAuditAdmin), not AzureDiagnostics."
+  }
+}
+
+run "every_resource_group_carries_a_cost_center" {
+  command = apply
+
+  assert {
+    condition     = alltrue([for rg in [azurerm_resource_group.platform, azurerm_resource_group.tenants] : contains(keys(rg.tags), "cost-center")])
+    error_message = "The require-tag policy would deny a resource group without cost-center."
+  }
+
+  assert {
+    condition     = contains(keys(module.policy.assignment_ids), "inherit_rg_tag_cost-center")
+    error_message = "Resources must inherit cost-center from their resource group."
   }
 }

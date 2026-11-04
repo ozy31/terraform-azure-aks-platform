@@ -3,8 +3,8 @@ SHELL := /bin/bash
 
 TF      ?= terraform
 TF_DIRS := terraform/modules/network terraform/modules/aks terraform/modules/platform-identities \
-           terraform/modules/tenant terraform/envs/prod terraform/bootstrap/github-oidc
-TF_TEST := terraform/modules/tenant terraform/envs/prod
+           terraform/modules/tenant terraform/modules/policy terraform/envs/prod terraform/bootstrap/github-oidc
+TF_TEST := terraform/modules/tenant terraform/modules/policy terraform/envs/prod
 
 .PHONY: help terraform tftest tflint tenant tenants schemas render manifests policies alerts lint shell security check clean
 

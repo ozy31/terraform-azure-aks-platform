@@ -126,6 +126,7 @@ terraform/
     aks/                  AKS cluster, control-plane and kubelet identities, role assignments
     platform-identities/  workload identities for cert-manager, external-dns, external-secrets
     tenant/               per-team RBAC, workload identity, Key Vault (+ terraform tests)
+    policy/               Azure Policy guardrails: UK regions only, cost-center tag (+ terraform tests)
   envs/prod/              composition, Flux extension and configuration (+ terraform tests)
   bootstrap/github-oidc/  state storage and two federated GitHub identities (plan / apply)
 gitops/
@@ -162,6 +163,7 @@ ordering: `infra-controllers` → `infra-configs` and `policy-templates` →
 | [0004](docs/adr/0004-upstream-istio-with-revision-tags.md) | Upstream Istio with revision tags and the Istio CNI, instead of the AKS add-on |
 | [0005](docs/adr/0005-node-auto-provisioning.md) | Node Auto-Provisioning (Karpenter) instead of fixed node pools |
 | [0006](docs/adr/0006-gatekeeper-policies-tested-in-ci.md) | Gatekeeper policies as code, tested with gator in CI |
+| [0007](docs/adr/0007-azure-policy-for-the-subscription.md) | Azure Policy for Azure resources, Gatekeeper for Kubernetes objects |
 
 A few smaller choices:
 
@@ -179,7 +181,7 @@ A few smaller choices:
 - **DNS-01 with workload identity.** Wildcard certificates for the shared
   Gateway, without solver pods or DNS credentials in the cluster.
 - **Least-privilege pipeline.** The apply identity is Contributor plus RBAC
-  Administrator with an ABAC condition: it can only grant the eight roles the
+  Administrator with an ABAC condition: it can only grant the nine roles the
   platform assigns, so it cannot make itself Owner.
 
 ## Deploying

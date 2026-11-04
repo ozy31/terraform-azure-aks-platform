@@ -152,6 +152,15 @@ module "network" {
   tags                = local.tags
 }
 
+module "policy" {
+  source = "../../modules/policy"
+
+  subscription_id   = "/subscriptions/${var.subscription_id}"
+  location          = var.location
+  allowed_locations = keys(local.region_short)
+  required_tags     = ["cost-center"]
+}
+
 module "aks" {
   source = "../../modules/aks"
 

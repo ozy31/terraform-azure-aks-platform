@@ -81,6 +81,7 @@ locals {
     "Key Vault Secrets Officer",
     "Azure Kubernetes Service Cluster User Role",
     "Azure Kubernetes Service RBAC Writer",
+    "Tag Contributor",
   ]
 
   role_guids = join(", ", [for r in data.azurerm_role_definition.assignable : r.role_definition_id])
@@ -172,4 +173,13 @@ resource "azurerm_role_assignment" "apply_rbac_admin" {
   principal_type       = "ServicePrincipal"
   condition            = local.rbac_admin_condition
   condition_version    = "2.0"
+}
+
+# Policy assignments are Microsoft.Authorization writes, which Contributor
+# excludes. Resource Policy Contributor adds them without role assignment rights.
+resource "azurerm_role_assignment" "apply_policy" {
+  scope                = data.azurerm_subscription.this.id
+  role_definition_name = "Resource Policy Contributor"
+  principal_id         = azuread_service_principal.github["apply"].object_id
+  principal_type       = "ServicePrincipal"
 }
