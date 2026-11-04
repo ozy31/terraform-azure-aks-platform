@@ -1,6 +1,7 @@
 # Run once, locally, by a subscription owner. Creates:
 #   - a storage account for Terraform state (Entra auth only, no keys)
-#   - two Entra applications federated to GitHub Actions:
+#   - two Entra applications federated to GitHub Actions (and, optionally,
+#     to Azure DevOps service connections):
 #       plan:  pull requests, read-only on the subscription
 #       apply: protected environments, can deploy but can only grant the
 #              roles the platform itself assigns
@@ -58,14 +59,36 @@ resource "azurerm_storage_container" "state" {
 }
 
 locals {
+  github_issuer = "https://token.actions.githubusercontent.com"
+
+  # Azure DevOps service connections using workload identity federation:
+  # issuer per organization, subject per service connection.
+  ado_subjects = var.azure_devops == null ? {} : {
+    for id in ["plan", "apply"] : id => {
+      "ado-${id}" = {
+        issuer  = "https://vstoken.dev.azure.com/${var.azure_devops.organization_id}"
+        subject = "sc://${var.azure_devops.organization}/${var.azure_devops.project}/azure-plat-${id}"
+      }
+    }
+  }
+
   identities = {
     plan = {
-      subjects = { pull-request = "repo:${var.github_repository}:pull_request" }
+      subjects = merge(
+        { pull-request = { issuer = local.github_issuer, subject = "repo:${var.github_repository}:pull_request" } },
+        lookup(local.ado_subjects, "plan", {}),
+      )
     }
     apply = {
-      subjects = {
-        for env in var.apply_environments : "env-${env}" => "repo:${var.github_repository}:environment:${env}"
-      }
+      subjects = merge(
+        {
+          for env in var.apply_environments : "env-${env}" => {
+            issuer  = local.github_issuer
+            subject = "repo:${var.github_repository}:environment:${env}"
+          }
+        },
+        lookup(local.ado_subjects, "apply", {}),
+      )
     }
   }
 
@@ -131,13 +154,13 @@ resource "azuread_service_principal" "github" {
 resource "azuread_application_federated_identity_credential" "github" {
   for_each = merge([
     for id, cfg in local.identities : {
-      for name, subject in cfg.subjects : "${id}/${name}" => { identity = id, name = name, subject = subject }
+      for name, s in cfg.subjects : "${id}/${name}" => { identity = id, name = name, issuer = s.issuer, subject = s.subject }
     }
   ]...)
 
   application_id = azuread_application.github[each.value.identity].id
   display_name   = each.value.name
-  issuer         = "https://token.actions.githubusercontent.com"
+  issuer         = each.value.issuer
   subject        = each.value.subject
   audiences      = ["api://AzureADTokenExchange"]
 }

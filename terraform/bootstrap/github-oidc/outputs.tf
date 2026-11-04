@@ -16,3 +16,14 @@ output "backend_config" {
     container_name       = azurerm_storage_container.state.name
   }
 }
+
+output "azure_devops_service_connections" {
+  description = "Create these Azure Resource Manager service connections (workload identity federation, manual) in Azure DevOps."
+  value = var.azure_devops == null ? null : {
+    for id in ["plan", "apply"] : "azure-plat-${id}" => {
+      client_id       = azuread_application.github[id].client_id
+      tenant_id       = var.entra_tenant_id
+      subscription_id = var.subscription_id
+    }
+  }
+}

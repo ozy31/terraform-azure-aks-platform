@@ -30,3 +30,13 @@ variable "apply_environments" {
   type        = list(string)
   default     = ["prod"]
 }
+
+variable "azure_devops" {
+  description = "Also federate the plan and apply identities to the Azure DevOps service connections azure-plat-plan and azure-plat-apply (.azure-pipelines/terraform.yml). organization_id is the GUID in the issuer shown on the service connection."
+  type = object({
+    organization    = string
+    organization_id = string
+    project         = string
+  })
+  default = null
+}

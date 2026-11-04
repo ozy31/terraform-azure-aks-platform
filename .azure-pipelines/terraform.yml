@@ -1,0 +1,54 @@
+# Azure DevOps version of .github/workflows/terraform.yml, for organisations
+# that run their pipelines there. Same model: plan on pull requests with the
+# read-only identity, apply on main through the "prod" environment (add an
+# approval check on it) with the deploy identity. Both service connections use
+# workload identity federation (terraform/bootstrap/github-oidc, variable
+# azure_devops): no client secrets are stored in Azure DevOps.
+
+trigger:
+  branches:
+    include: [main]
+  paths:
+    include: [terraform/*, gitops/tenants/*]
+
+pr:
+  branches:
+    include: [main]
+  paths:
+    include: [terraform/*, gitops/tenants/*]
+
+variables:
+  TERRAFORM_VERSION: "1.15.5"
+  WORKDIR: terraform/envs/prod
+  TF_IN_AUTOMATION: "true"
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+  - stage: plan
+    condition: eq(variables['Build.Reason'], 'PullRequest')
+    jobs:
+      - job: plan
+        steps:
+          - template: steps/terraform.yml
+            parameters:
+              serviceConnection: azure-plat-plan
+              command: plan -lock=false -out=tfplan
+
+  - stage: apply
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.Reason'], 'PullRequest'))
+    # One apply at a time, in commit order.
+    lockBehavior: sequential
+    jobs:
+      - deployment: apply
+        environment: prod
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                - template: steps/terraform.yml
+                  parameters:
+                    serviceConnection: azure-plat-apply
+                    command: apply -auto-approve

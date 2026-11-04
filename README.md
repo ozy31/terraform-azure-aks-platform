@@ -144,6 +144,7 @@ gitops/
   tenants/<team>/         tenant.yaml + HelmRelease of charts/tenant
 charts/tenant/            namespace guardrails, with a JSON schema for its values
 examples/checkout-api/    what a team deploys: Deployment, HTTPRoute, ExternalSecret, PDB
+.azure-pipelines/         the same plan / apply pipeline for Azure DevOps
 hack/                     validation scripts used by make and CI
 docs/adr/                 architecture decision records
 docs/runbooks/            onboarding, upgrades
@@ -203,6 +204,11 @@ A few smaller choices:
 
 3. Merge to `main`. The `terraform` workflow plans on pull requests and applies
    on `main` after approval. Flux then installs everything under `gitops/`.
+
+   On Azure DevOps instead, set the bootstrap's `azure_devops` variable, create
+   the two service connections from its `azure_devops_service_connections`
+   output (workload identity federation, manual), add an approval check to the
+   `prod` environment and point a pipeline at `.azure-pipelines/terraform.yml`.
 
 4. Delegate the DNS zone to the `dns_name_servers` output and store
    `grafana-admin-user` / `grafana-admin-password` in the platform Key Vault.

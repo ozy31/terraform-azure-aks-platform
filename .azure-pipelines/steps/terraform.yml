@@ -1,0 +1,36 @@
+# terraform init + <command> with the identity behind a service connection.
+# AzureCLI@2 exposes the federated token as $idToken; Terraform and the azurerm
+# backend read it from ARM_OIDC_TOKEN. The token is short-lived (about ten
+# minutes), which covers init and a plan or apply of this configuration.
+
+parameters:
+  - name: serviceConnection
+    type: string
+  - name: command
+    type: string
+
+steps:
+  - script: |
+      set -euo pipefail
+      curl -fsSLo terraform.zip "https://releases.hashicorp.com/terraform/$(TERRAFORM_VERSION)/terraform_$(TERRAFORM_VERSION)_linux_amd64.zip"
+      unzip -oq terraform.zip -d "$(Agent.ToolsDirectory)/terraform"
+      echo "##vso[task.prependpath]$(Agent.ToolsDirectory)/terraform"
+    displayName: install terraform
+
+  - task: AzureCLI@2
+    displayName: terraform ${{ parameters.command }}
+    inputs:
+      azureSubscription: ${{ parameters.serviceConnection }}
+      scriptType: bash
+      scriptLocation: inlineScript
+      addSpnToEnvironment: true
+      inlineScript: |
+        set -euo pipefail
+        export ARM_USE_OIDC=true
+        export ARM_OIDC_TOKEN="$idToken"
+        export ARM_CLIENT_ID="$servicePrincipalId"
+        export ARM_TENANT_ID="$tenantId"
+        ARM_SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
+        export ARM_SUBSCRIPTION_ID
+        terraform -chdir="$WORKDIR" init -input=false -backend-config=backend.hcl
+        terraform -chdir="$WORKDIR" ${{ parameters.command }} -input=false -no-color
