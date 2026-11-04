@@ -41,3 +41,12 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "private_dns_zones" {
+  description = "Private DNS zones to create and link to the VNet, keyed by the service that uses them."
+  type        = map(string)
+  default = {
+    key_vault = "privatelink.vaultcore.azure.net"
+    acr       = "privatelink.azurecr.io"
+  }
+}

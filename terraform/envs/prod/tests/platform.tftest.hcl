@@ -66,6 +66,12 @@ mock_provider "azurerm" {
     }
   }
 
+  mock_resource "azurerm_private_dns_zone" {
+    defaults = {
+      id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-plat-prod-uks/providers/Microsoft.Network/privateDnsZones/privatelink.vaultcore.azure.net"
+    }
+  }
+
   mock_resource "azurerm_network_security_group" {
     defaults = {
       id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-plat-prod-uks/providers/Microsoft.Network/networkSecurityGroups/nsg-plat-prod-uks-aks-nodes"

@@ -121,7 +121,8 @@ that passes all of them, checked in CI.
 ```
 terraform/
   modules/
-    network/              VNet, node / API server / private-endpoint subnets, NSG, NAT gateway
+    network/              VNet, node / API server / private-endpoint subnets, NSG, NAT gateway,
+                          private DNS zones for Key Vault and ACR
     aks/                  AKS cluster, control-plane and kubelet identities, role assignments
     platform-identities/  workload identities for cert-manager, external-dns, external-secrets
     tenant/               per-team RBAC, workload identity, Key Vault (+ terraform tests)

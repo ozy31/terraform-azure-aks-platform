@@ -27,3 +27,9 @@ output "nat_gateway_id" {
   description = "NAT gateway ID. The cluster must not be created before the subnet association exists."
   value       = azurerm_subnet_nat_gateway_association.nodes.nat_gateway_id
 }
+
+output "private_dns_zone_ids" {
+  description = "Private DNS zone IDs keyed like var.private_dns_zones. Available only once the VNet links exist, so endpoint records resolve as soon as they are created."
+  value       = { for k, z in azurerm_private_dns_zone.this : k => z.id }
+  depends_on  = [azurerm_private_dns_zone_virtual_network_link.this]
+}

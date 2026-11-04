@@ -124,3 +124,24 @@ resource "azurerm_subnet_nat_gateway_association" "nodes" {
   subnet_id      = azurerm_subnet.nodes.id
   nat_gateway_id = azurerm_nat_gateway.this.id
 }
+
+# Private DNS zones for the private endpoints in this VNet. Azure does not
+# create these: without a zone linked to the VNet, the service name keeps
+# resolving to its public IP and traffic never reaches the private endpoint.
+resource "azurerm_private_dns_zone" "this" {
+  for_each = var.private_dns_zones
+
+  name                = each.value
+  resource_group_name = var.resource_group_name
+  tags                = var.tags
+}
+
+resource "azurerm_private_dns_zone_virtual_network_link" "this" {
+  for_each = var.private_dns_zones
+
+  name                 = "link-${var.name}"
+  private_dns_zone_id  = azurerm_private_dns_zone.this[each.key].id
+  virtual_network_id   = azurerm_virtual_network.this.id
+  registration_enabled = false
+  tags                 = var.tags
+}
