@@ -231,6 +231,7 @@ A few smaller choices:
 | Pods pending | `kubectl get nodeclaims` and the NAP events: NodePool limits, quota, or a zone without capacity |
 | Certificate not issued | `kubectl describe certificate -n istio-ingress wildcard`, then the cert-manager logs: the identity needs DNS Zone Contributor on the zone |
 | `TenantQuotaNearlyFull` / `GatewayHighErrorRate` | Carry a `tenant` label for routing to the owning team; quota changes go through the team's `tenant.yaml` |
+| Who changed or deleted something | Log Analytics: `AKSAuditAdmin \| where ObjectRef has "<name>" \| project TimeGenerated, User, Verb, ObjectRef`; Key Vault access is in `AzureDiagnostics` with `ResourceProvider == "MICROSOFT.KEYVAULT"` |
 | Something in Git is not in the cluster | `flux get kustomizations` and `flux get helmreleases -A`: the first failing item blocks the ones that depend on it |
 
 ## License

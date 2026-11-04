@@ -66,6 +66,11 @@ variable "key_vault_private_dns_zone_id" {
   type        = string
 }
 
+variable "log_analytics_workspace_id" {
+  description = "Workspace that receives the tenant Key Vault audit logs."
+  type        = string
+}
+
 variable "tags" {
   description = "Tags applied to every resource."
   type        = map(string)

@@ -24,6 +24,7 @@ variables {
   cluster_id                    = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-test/providers/Microsoft.ContainerService/managedClusters/aks-test"
   oidc_issuer_url               = "https://uksouth.oic.prod-aks.azure.com/00000000-0000-0000-0000-000000000000/11111111-1111-1111-1111-111111111111/"
   private_endpoint_subnet_id    = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-test/providers/Microsoft.Network/virtualNetworks/vnet/subnets/private-endpoints"
+  log_analytics_workspace_id    = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-test/providers/Microsoft.OperationalInsights/workspaces/log-test"
   key_vault_private_dns_zone_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-test/providers/Microsoft.Network/privateDnsZones/privatelink.vaultcore.azure.net"
 
   tenant = {
@@ -142,6 +143,11 @@ run "key_vault_has_a_private_endpoint" {
   assert {
     condition     = azurerm_key_vault.this[0].network_acls[0].default_action == "Deny"
     error_message = "The tenant vault must deny public traffic by default."
+  }
+
+  assert {
+    condition     = azurerm_monitor_diagnostic_setting.key_vault[0].log_analytics_workspace_id == var.log_analytics_workspace_id
+    error_message = "Tenant vault audit logs must reach the platform workspace."
   }
 }
 

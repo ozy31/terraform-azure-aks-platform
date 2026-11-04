@@ -110,3 +110,16 @@ resource "azurerm_role_assignment" "kv_secrets_user" {
   principal_id         = azurerm_user_assigned_identity.workload.principal_id
   principal_type       = "ServicePrincipal"
 }
+
+# Secret reads and permission changes, for the platform team and the tenant.
+resource "azurerm_monitor_diagnostic_setting" "key_vault" {
+  count = var.tenant.keyVault ? 1 : 0
+
+  name                       = "diag-to-log-analytics"
+  target_resource_id         = azurerm_key_vault.this[0].id
+  log_analytics_workspace_id = var.log_analytics_workspace_id
+
+  enabled_log {
+    category_group = "audit"
+  }
+}

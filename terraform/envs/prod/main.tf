@@ -201,4 +201,5 @@ module "tenant" {
 
   private_endpoint_subnet_id    = module.network.private_endpoint_subnet_id
   key_vault_private_dns_zone_id = module.network.private_dns_zone_ids["key_vault"]
+  log_analytics_workspace_id    = azurerm_log_analytics_workspace.this.id
 }

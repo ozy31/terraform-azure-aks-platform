@@ -143,3 +143,17 @@ run "registry_and_vault_are_private" {
     error_message = "The platform Key Vault is reached through its private endpoint, not a service endpoint."
   }
 }
+
+run "audit_logs_are_collected" {
+  command = apply
+
+  assert {
+    condition     = contains([for l in azurerm_monitor_diagnostic_setting.aks.enabled_log : l.category], "kube-audit-admin")
+    error_message = "AKS must send kube-audit-admin to Log Analytics."
+  }
+
+  assert {
+    condition     = azurerm_monitor_diagnostic_setting.aks.log_analytics_destination_type == "Dedicated"
+    error_message = "AKS logs go to resource-specific tables (AKSAuditAdmin), not AzureDiagnostics."
+  }
+}
