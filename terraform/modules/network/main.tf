@@ -22,12 +22,8 @@ resource "azurerm_subnet" "nodes" {
   address_prefixes                = [local.subnets.nodes]
   default_outbound_access_enabled = false
 
-  # Key Vault and Storage are reached over service endpoints, so their
-  # firewalls can allow this subnet instead of opening public access.
-  service_endpoint {
-    service = "Microsoft.KeyVault"
-  }
-
+  # Key Vault and ACR are reached over private endpoints. Storage keeps a
+  # service endpoint so storage firewalls can allow this subnet.
   service_endpoint {
     service = "Microsoft.Storage"
   }

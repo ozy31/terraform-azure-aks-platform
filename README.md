@@ -100,7 +100,7 @@ After merge, without a ticket:
 | `AKS RBAC Writer` on `<cluster>/namespaces/checkout` for the group | Namespace with Pod Security, cost-center label, Istio revision |
 | `Cluster User Role` to fetch a kubeconfig | ResourceQuota and LimitRange |
 | User-assigned identity, federated to each service account | Service accounts annotated for workload identity |
-| Key Vault (RBAC, purge protection, VNet-only) | `SecretStore` bound to that vault and identity |
+| Key Vault (RBAC, purge protection, private endpoint) | `SecretStore` bound to that vault and identity |
 | Group gets Secrets Officer, identity gets Secrets User | Default-deny network policy plus DNS, istiod, gateway, HTTPS egress |
 | | Istio `AuthorizationPolicy`: only the gateway and the namespace itself |
 

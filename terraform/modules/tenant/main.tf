@@ -62,11 +62,34 @@ resource "azurerm_key_vault" "this" {
   soft_delete_retention_days = 90
   tags                       = local.tags
 
+  # Pods reach the vault through the private endpoint. The team's own
+  # ranges (keyVaultIpRules) can still manage secrets over the public endpoint.
   network_acls {
-    default_action             = "Deny"
-    bypass                     = "AzureServices"
-    virtual_network_subnet_ids = [var.node_subnet_id]
-    ip_rules                   = var.tenant.keyVaultIpRules
+    default_action = "Deny"
+    bypass         = "AzureServices"
+    ip_rules       = var.tenant.keyVaultIpRules
+  }
+}
+
+resource "azurerm_private_endpoint" "key_vault" {
+  count = var.tenant.keyVault ? 1 : 0
+
+  name                = "pe-${local.key_vault_name}"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  subnet_id           = var.private_endpoint_subnet_id
+  tags                = local.tags
+
+  private_service_connection {
+    name                           = "vault"
+    private_connection_resource_id = azurerm_key_vault.this[0].id
+    subresource_names              = ["vault"]
+    is_manual_connection           = false
+  }
+
+  private_dns_zone_group {
+    name                 = "vault"
+    private_dns_zone_ids = [var.key_vault_private_dns_zone_id]
   }
 }
 

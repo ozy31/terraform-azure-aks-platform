@@ -17,13 +17,14 @@ mock_provider "azurerm" {
 }
 
 variables {
-  name_prefix         = "plat-prod"
-  location            = "uksouth"
-  resource_group_name = "rg-test"
-  entra_tenant_id     = "00000000-0000-0000-0000-000000000000"
-  cluster_id          = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-test/providers/Microsoft.ContainerService/managedClusters/aks-test"
-  oidc_issuer_url     = "https://uksouth.oic.prod-aks.azure.com/00000000-0000-0000-0000-000000000000/11111111-1111-1111-1111-111111111111/"
-  node_subnet_id      = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-test/providers/Microsoft.Network/virtualNetworks/vnet/subnets/nodes"
+  name_prefix                   = "plat-prod"
+  location                      = "uksouth"
+  resource_group_name           = "rg-test"
+  entra_tenant_id               = "00000000-0000-0000-0000-000000000000"
+  cluster_id                    = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-test/providers/Microsoft.ContainerService/managedClusters/aks-test"
+  oidc_issuer_url               = "https://uksouth.oic.prod-aks.azure.com/00000000-0000-0000-0000-000000000000/11111111-1111-1111-1111-111111111111/"
+  private_endpoint_subnet_id    = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-test/providers/Microsoft.Network/virtualNetworks/vnet/subnets/private-endpoints"
+  key_vault_private_dns_zone_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-test/providers/Microsoft.Network/privateDnsZones/privatelink.vaultcore.azure.net"
 
   tenant = {
     name            = "checkout"
@@ -128,4 +129,37 @@ run "rejects_owner_that_is_not_a_group_id" {
   }
 
   expect_failures = [var.tenant]
+}
+
+run "key_vault_has_a_private_endpoint" {
+  command = apply
+
+  assert {
+    condition     = azurerm_private_endpoint.key_vault[0].private_dns_zone_group[0].private_dns_zone_ids == tolist([var.key_vault_private_dns_zone_id])
+    error_message = "The tenant vault must register in the privatelink zone, or pods resolve its public IP."
+  }
+
+  assert {
+    condition     = azurerm_key_vault.this[0].network_acls[0].default_action == "Deny"
+    error_message = "The tenant vault must deny public traffic by default."
+  }
+}
+
+run "no_key_vault_no_endpoint" {
+  command = apply
+
+  variables {
+    tenant = {
+      name         = "batch"
+      displayName  = "Batch"
+      ownerGroupId = "2f1c9a54-7d3e-4b8a-9c61-0e5d4a3b2c10"
+      costCenter   = "CC-1042"
+      keyVault     = false
+    }
+  }
+
+  assert {
+    condition     = length(azurerm_private_endpoint.key_vault) == 0
+    error_message = "A tenant without a Key Vault gets no private endpoint."
+  }
 }

@@ -197,6 +197,8 @@ module "tenant" {
   entra_tenant_id     = var.entra_tenant_id
   cluster_id          = module.aks.id
   oidc_issuer_url     = module.aks.oidc_issuer_url
-  node_subnet_id      = module.network.node_subnet_id
   tags                = local.tags
+
+  private_endpoint_subnet_id    = module.network.private_endpoint_subnet_id
+  key_vault_private_dns_zone_id = module.network.private_dns_zone_ids["key_vault"]
 }

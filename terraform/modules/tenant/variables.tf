@@ -56,8 +56,13 @@ variable "oidc_issuer_url" {
   type        = string
 }
 
-variable "node_subnet_id" {
-  description = "Node subnet allowed through the tenant Key Vault firewall."
+variable "private_endpoint_subnet_id" {
+  description = "Subnet for the tenant Key Vault private endpoint."
+  type        = string
+}
+
+variable "key_vault_private_dns_zone_id" {
+  description = "privatelink.vaultcore.azure.net zone linked to the cluster VNet."
   type        = string
 }
 
