@@ -42,15 +42,44 @@ resource "azurerm_log_analytics_workspace" "this" {
   tags                = local.tags
 }
 
+# Nodes pull through a private endpoint. The public endpoint stays for image
+# pushes from the authorized ranges (build agents, admins) and is closed to
+# everything else.
 resource "azurerm_container_registry" "this" {
-  name                     = var.acr_name
-  location                 = var.location
-  resource_group_name      = azurerm_resource_group.platform.name
-  sku                      = "Premium"
-  admin_enabled            = false
-  zone_redundancy_enabled  = true
-  retention_policy_in_days = 30
-  tags                     = local.tags
+  name                       = var.acr_name
+  location                   = var.location
+  resource_group_name        = azurerm_resource_group.platform.name
+  sku                        = "Premium"
+  admin_enabled              = false
+  zone_redundancy_enabled    = true
+  retention_policy_in_days   = 30
+  network_rule_bypass_option = "AzureServices"
+  tags                       = local.tags
+
+  network_rule_set = [{
+    default_action = "Deny"
+    ip_rule        = [for r in var.authorized_ip_ranges : { action = "Allow", ip_range = r }]
+  }]
+}
+
+resource "azurerm_private_endpoint" "acr" {
+  name                = "pe-${local.name}-acr"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.platform.name
+  subnet_id           = module.network.private_endpoint_subnet_id
+  tags                = local.tags
+
+  private_service_connection {
+    name                           = "acr"
+    private_connection_resource_id = azurerm_container_registry.this.id
+    subresource_names              = ["registry"]
+    is_manual_connection           = false
+  }
+
+  private_dns_zone_group {
+    name                 = "acr"
+    private_dns_zone_ids = [module.network.private_dns_zone_ids["acr"]]
+  }
 }
 
 resource "azurerm_dns_zone" "this" {
@@ -72,15 +101,36 @@ resource "azurerm_key_vault" "platform" {
   soft_delete_retention_days = 90
   tags                       = local.tags
 
+  # The cluster reaches the vault through the private endpoint below; the
+  # firewall only lets admins in from the authorized ranges.
   network_acls {
-    default_action             = "Deny"
-    bypass                     = "AzureServices"
-    virtual_network_subnet_ids = [module.network.node_subnet_id]
-    ip_rules                   = var.authorized_ip_ranges
+    default_action = "Deny"
+    bypass         = "AzureServices"
+    ip_rules       = var.authorized_ip_ranges
   }
 
   lifecycle {
     prevent_destroy = true
+  }
+}
+
+resource "azurerm_private_endpoint" "platform_kv" {
+  name                = "pe-${local.name}-kv-platform"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.platform.name
+  subnet_id           = module.network.private_endpoint_subnet_id
+  tags                = local.tags
+
+  private_service_connection {
+    name                           = "vault"
+    private_connection_resource_id = azurerm_key_vault.platform.id
+    subresource_names              = ["vault"]
+    is_manual_connection           = false
+  }
+
+  private_dns_zone_group {
+    name                 = "vault"
+    private_dns_zone_ids = [module.network.private_dns_zone_ids["key_vault"]]
   }
 }
 

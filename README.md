@@ -167,6 +167,9 @@ A few smaller choices:
 
 - **NAT gateway with a /30 public IP prefix for egress.** Four known IPs that
   partners can allow-list, and no SNAT port exhaustion on the cluster load balancer.
+- **Private endpoints for ACR and Key Vault.** Nodes pull images and read
+  secrets over private IPs, with the `privatelink` zones linked to the VNet.
+  The public endpoints only accept the authorized ranges (admins, build agents).
 - **API Server VNet Integration.** Node-to-API-server traffic stays in the VNet
   and the public endpoint is limited to authorized ranges.
 - **Separate maintenance days.** Node images on Saturday, Kubernetes patches on

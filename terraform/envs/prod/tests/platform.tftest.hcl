@@ -124,3 +124,22 @@ run "kustomizations_are_ordered" {
     error_message = "Tenants must wait for the platform configs and the policy constraints."
   }
 }
+
+run "registry_and_vault_are_private" {
+  command = apply
+
+  assert {
+    condition     = azurerm_container_registry.this.network_rule_set[0].default_action == "Deny"
+    error_message = "The registry must deny public traffic outside the authorized ranges."
+  }
+
+  assert {
+    condition     = azurerm_private_endpoint.acr.private_service_connection[0].subresource_names == tolist(["registry"])
+    error_message = "Nodes must pull images through the ACR private endpoint."
+  }
+
+  assert {
+    condition     = length(coalesce(azurerm_key_vault.platform.network_acls[0].virtual_network_subnet_ids, [])) == 0
+    error_message = "The platform Key Vault is reached through its private endpoint, not a service endpoint."
+  }
+}
