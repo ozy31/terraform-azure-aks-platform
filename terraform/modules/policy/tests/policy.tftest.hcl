@@ -9,6 +9,13 @@ mock_provider "azurerm" {
   mock_resource "azurerm_subscription_policy_assignment" {
     defaults = {
       id = "/subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.Authorization/policyAssignments/mock"
+      # The remediation role assignment reads this; the provider rejects a non-UUID.
+      identity = {
+        type         = "SystemAssigned"
+        principal_id = "44444444-4444-4444-4444-444444444444"
+        tenant_id    = "00000000-0000-0000-0000-000000000000"
+        identity_ids = []
+      }
     }
   }
 }
