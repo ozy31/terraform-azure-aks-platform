@@ -52,6 +52,20 @@ run "workloads_use_federated_identity" {
   }
 }
 
+run "event_driven_and_vertical_autoscaling" {
+  command = plan
+
+  assert {
+    condition     = azurerm_kubernetes_cluster.this.workload_autoscaler_profile[0].keda_enabled
+    error_message = "KEDA scales inference and queue workers; CPU alone does not reflect their load."
+  }
+
+  assert {
+    condition     = azurerm_kubernetes_cluster.this.workload_autoscaler_profile[0].vertical_pod_autoscaler_enabled
+    error_message = "VPA recommendations keep requests honest, which Node Auto-Provisioning sizes VMs from."
+  }
+}
+
 run "control_plane_roles_exist_before_the_cluster" {
   command = plan
 

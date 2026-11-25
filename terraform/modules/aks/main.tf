@@ -124,8 +124,12 @@ resource "azurerm_kubernetes_cluster" "this" {
     outbound_type       = "userAssignedNATGateway"
   }
 
+  # KEDA scales on queue depth and Prometheus queries (inference request
+  # backlog, batch queues); VPA recommends requests from observed usage so
+  # Node Auto-Provisioning picks right-sized VMs.
   workload_autoscaler_profile {
-    keda_enabled = true
+    keda_enabled                    = true
+    vertical_pod_autoscaler_enabled = true
   }
 
   storage_profile {
