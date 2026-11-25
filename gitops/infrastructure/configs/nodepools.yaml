@@ -89,3 +89,48 @@ spec:
   disruption:
     consolidationPolicy: WhenEmptyOrUnderutilized
     consolidateAfter: 1m
+---
+# GPU capacity for model serving. Nothing runs here until a pod requests
+# nvidia.com/gpu and tolerates the taint; empty nodes go away after 10 minutes.
+# The limit caps what a runaway Deployment can cost.
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: gpu-inference
+spec:
+  template:
+    metadata:
+      labels:
+        platform.example.io/pool: gpu-inference
+    spec:
+      nodeClassRef:
+        group: karpenter.azure.com
+        kind: AKSNodeClass
+        name: default
+      taints:
+        - key: nvidia.com/gpu
+          value: present
+          effect: NoSchedule
+      expireAfter: 720h
+      requirements:
+        - key: karpenter.azure.com/sku-gpu-manufacturer
+          operator: In
+          values: [nvidia]
+        - key: karpenter.azure.com/sku-gpu-count
+          operator: In
+          values: ["1", "2"]
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: [on-demand]
+        - key: kubernetes.io/arch
+          operator: In
+          values: [amd64]
+  limits:
+    nvidia.com/gpu: "8"
+  disruption:
+    # A loaded model takes minutes to come back; only remove nodes that are
+    # empty, never consolidate a serving pod onto another node mid-traffic.
+    consolidationPolicy: WhenEmpty
+    consolidateAfter: 10m
+    budgets:
+      - nodes: "1"
