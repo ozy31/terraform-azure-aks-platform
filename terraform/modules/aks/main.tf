@@ -139,6 +139,16 @@ resource "azurerm_kubernetes_cluster" "this" {
     snapshot_controller_enabled = true
   }
 
+  # Defender for Containers: runtime threat detection on the nodes and
+  # findings in Defender for Cloud. Billed per vCore, so it can be turned off
+  # for throwaway clusters.
+  dynamic "microsoft_defender" {
+    for_each = var.defender_enabled ? [1] : []
+    content {
+      log_analytics_workspace_id = var.log_analytics_workspace_id
+    }
+  }
+
   oms_agent {
     log_analytics_workspace_id      = var.log_analytics_workspace_id
     msi_auth_for_monitoring_enabled = true

@@ -103,6 +103,12 @@ variable "log_analytics_workspace_id" {
   type        = string
 }
 
+variable "defender_enabled" {
+  description = "Run the Defender for Containers sensor and send its findings to the Log Analytics workspace."
+  type        = bool
+  default     = true
+}
+
 variable "maintenance" {
   description = "Maintenance windows (UTC). Cluster patches and node images roll on different days so a bad change has one cause."
   type = object({

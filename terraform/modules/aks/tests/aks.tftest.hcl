@@ -94,6 +94,28 @@ run "upgrades_drain_and_soak" {
   }
 }
 
+run "defender_reports_to_the_platform_workspace" {
+  command = plan
+
+  assert {
+    condition     = azurerm_kubernetes_cluster.this.microsoft_defender[0].log_analytics_workspace_id == var.log_analytics_workspace_id
+    error_message = "Defender findings must land in the same workspace as the audit logs."
+  }
+}
+
+run "defender_can_be_turned_off" {
+  command = plan
+
+  variables {
+    defender_enabled = false
+  }
+
+  assert {
+    condition     = length(azurerm_kubernetes_cluster.this.microsoft_defender) == 0
+    error_message = "defender_enabled = false must remove the sensor."
+  }
+}
+
 run "minor_version_only" {
   command = plan
 
