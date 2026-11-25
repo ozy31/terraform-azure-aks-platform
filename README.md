@@ -52,7 +52,7 @@ flowchart LR
         subgraph vnet["VNet"]
             subgraph aks["AKS (Entra ID + Azure RBAC, Cilium overlay)"]
                 sys["system pool<br/>critical add-ons only"]
-                nap["NAP / Karpenter nodes<br/>general + spot"]
+                nap["NAP / Karpenter nodes<br/>general + spot + GPU"]
                 flux["Flux extension"]
                 gw["Istio gateway<br/>(Gateway API)"]
                 tenants["tenant namespaces<br/>quota, netpol, mTLS, Gatekeeper"]
@@ -165,6 +165,7 @@ ordering: `infra-controllers` → `infra-configs` and `policy-templates` →
 | [0005](docs/adr/0005-node-auto-provisioning.md) | Node Auto-Provisioning (Karpenter) instead of fixed node pools |
 | [0006](docs/adr/0006-gatekeeper-policies-tested-in-ci.md) | Gatekeeper policies as code, tested with gator in CI |
 | [0007](docs/adr/0007-azure-policy-for-the-subscription.md) | Azure Policy for Azure resources, Gatekeeper for Kubernetes objects |
+| [0008](docs/adr/0008-gpu-capacity-through-node-auto-provisioning.md) | GPU nodes from an empty, tainted NodePool; inference scaled by KEDA |
 
 A few smaller choices:
 
@@ -179,6 +180,11 @@ A few smaller choices:
   Sunday, so an incident after a window has one suspect.
 - **No consolidation in UK trading hours.** NodePool disruption budgets block
   voluntary node replacement from 08:00 on weekdays.
+- **GPU nodes only on demand.** The `gpu-inference` NodePool is tainted,
+  capped at 8 GPUs and starts empty; KEDA scales model servers on queue
+  depth, and empty GPU nodes are removed after 10 minutes.
+- **Defender for Containers.** Runtime threat detection on every node,
+  reporting to the same workspace as the audit logs.
 - **DNS-01 with workload identity.** Wildcard certificates for the shared
   Gateway, without solver pods or DNS credentials in the cluster.
 - **Least-privilege pipeline.** The apply identity is Contributor plus RBAC
