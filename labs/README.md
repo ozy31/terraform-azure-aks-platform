@@ -8,6 +8,10 @@ They are **not** part of the platform deployment in `terraform/`; the production
 version of each idea lives there. Everything here was created by hand, checked in the
 portal and with `kubectl`, and torn down again. Nothing runs permanently.
 
+The pod manifests were hardened afterwards (non-root, read-only root filesystem, no
+capabilities, a writable `/tmp`) so they pass the repo's Trivy scan; that hardened form has
+not been re-run on a cluster yet.
+
 | Lab | What it shows |
 |---|---|
 | `00-budget.sh` | a budget alert before anything else is created |

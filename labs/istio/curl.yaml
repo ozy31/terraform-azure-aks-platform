@@ -50,11 +50,21 @@ spec:
     spec:
       terminationGracePeriodSeconds: 0
       serviceAccountName: curl
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
       containers:
       - name: curl
         image: docker.io/curlimages/curl:8.16.0
         command: ["/bin/sleep", "infinity"]
         imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 100
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities: {drop: [ALL]}
+          seccompProfile: {type: RuntimeDefault}
         volumeMounts:
         - mountPath: /etc/curl/tls
           name: secret-volume

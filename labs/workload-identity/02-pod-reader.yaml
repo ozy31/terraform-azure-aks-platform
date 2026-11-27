@@ -13,6 +13,9 @@ metadata:
 spec:
   serviceAccountName: blob-reader
   restartPolicy: Never
+  securityContext:
+    runAsNonRoot: true
+    seccompProfile: {type: RuntimeDefault}
   containers:
     - name: reader
       image: mcr.microsoft.com/azure-cli:latest
@@ -33,6 +36,19 @@ spec:
           echo x > /tmp/x.txt
           az storage blob upload --account-name ${STORAGE_ACCOUNT} -c docs -n x.txt -f /tmp/x.txt \
             --auth-mode login -o none 2>&1 | grep -o "AuthorizationPermissionMismatch\|not have the required permissions" | head -1
+      env:
+        - {name: HOME, value: /tmp}
+        - {name: AZURE_CONFIG_DIR, value: /tmp/.azure}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities: {drop: [ALL]}
+      volumeMounts:
+        - {name: tmp, mountPath: /tmp}
       resources:
         requests: {cpu: 100m, memory: 256Mi}
         limits: {memory: 512Mi}
+  volumes:
+    - {name: tmp, emptyDir: {}}

@@ -32,6 +32,9 @@ spec:
         app: helloworld
         version: v1
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
       containers:
       - name: helloworld
         image: registry.istio.io/release/examples-helloworld-v1:1.0
@@ -39,8 +42,19 @@ spec:
           requests:
             cpu: "100m"
         imagePullPolicy: IfNotPresent  # Always
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities: {drop: [ALL]}
+          seccompProfile: {type: RuntimeDefault}
+        volumeMounts:
+        - {name: tmp, mountPath: /tmp}
         ports:
         - containerPort: 5000
+      volumes:
+      - {name: tmp, emptyDir: {}}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -61,6 +75,9 @@ spec:
         app: helloworld
         version: v2
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
       containers:
       - name: helloworld
         image: registry.istio.io/release/examples-helloworld-v2:1.0
@@ -68,5 +85,16 @@ spec:
           requests:
             cpu: "100m"
         imagePullPolicy: IfNotPresent  # Always
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities: {drop: [ALL]}
+          seccompProfile: {type: RuntimeDefault}
+        volumeMounts:
+        - {name: tmp, mountPath: /tmp}
         ports:
         - containerPort: 5000
+      volumes:
+      - {name: tmp, emptyDir: {}}
