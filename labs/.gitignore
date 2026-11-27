@@ -1,0 +1,6 @@
+storage/.env
+aks/terraform/.terraform/
+aks/terraform/.terraform.lock.hcl
+aks/terraform/*.tfstate*
+aks/terraform/terraform.tfvars
+aks/terraform/tfplan
