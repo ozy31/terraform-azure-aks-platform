@@ -1,0 +1,38 @@
+# Kubernetes side 2/2: the pod.
+# With the label azure.workload.identity/use: "true" the AKS webhook injects
+#   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_AUTHORITY_HOST
+#   AZURE_FEDERATED_TOKEN_FILE -> a projected service account token (1 hour, refreshed)
+# There is no secret anywhere in the pod.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: blob-reader
+  namespace: demo
+  labels:
+    azure.workload.identity/use: "true"
+spec:
+  serviceAccountName: blob-reader
+  restartPolicy: Never
+  containers:
+    - name: reader
+      image: mcr.microsoft.com/azure-cli:latest
+      command: ["bash", "-c"]
+      args:
+        - |
+          echo "== 1) Injected variables (no secret, just ids and a token file)"
+          env | grep ^AZURE_
+          echo "== 2) DNS: which IP does the storage name resolve to inside the VNet?"
+          python3 -c "import socket;print(socket.gethostbyname('${STORAGE_ACCOUNT}.blob.core.windows.net'))"
+          echo "== 3) Exchange the Kubernetes token for an Entra ID token"
+          az login --service-principal -u "$AZURE_CLIENT_ID" -t "$AZURE_TENANT_ID" \
+            --federated-token "$(cat $AZURE_FEDERATED_TOKEN_FILE)" --allow-no-subscriptions -o none && echo "login OK"
+          echo "== 4) Read the blob"
+          az storage blob download --account-name ${STORAGE_ACCOUNT} -c docs -n hello.txt \
+            --auth-mode login -f /tmp/hello.txt -o none && cat /tmp/hello.txt
+          echo "== 5) Try to write (Reader role only, this MUST be refused)"
+          echo x > /tmp/x.txt
+          az storage blob upload --account-name ${STORAGE_ACCOUNT} -c docs -n x.txt -f /tmp/x.txt \
+            --auth-mode login -o none 2>&1 | grep -o "AuthorizationPermissionMismatch\|not have the required permissions" | head -1
+      resources:
+        requests: {cpu: 100m, memory: 256Mi}
+        limits: {memory: 512Mi}

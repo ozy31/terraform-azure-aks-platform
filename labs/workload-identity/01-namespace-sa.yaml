@@ -1,0 +1,15 @@
+# Kubernetes side 1/2: namespace + service account.
+# The client-id annotation says which Azure identity this service account becomes (id-app-reader).
+# AWS: the eks.amazonaws.com/role-arn annotation (IRSA).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demo
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: blob-reader
+  namespace: demo
+  annotations:
+    azure.workload.identity/client-id: "${APP_READER_CLIENT_ID}"
