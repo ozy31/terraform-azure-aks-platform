@@ -34,6 +34,7 @@ guardrails the platform enforces.
 - [Deploying](#deploying)
 - [Validation](#validation)
 - [Operations](#operations)
+- [Hands-on labs](#hands-on-labs)
 
 ## Architecture
 
@@ -148,6 +149,7 @@ examples/checkout-api/    what a team deploys: Deployment, HTTPRoute, ExternalSe
 hack/                     validation scripts used by make and CI
 docs/adr/                 architecture decision records
 docs/runbooks/            onboarding, upgrades
+labs/                     hands-on Azure CLI and Terraform labs behind the ideas above (not part of the deployment)
 ```
 
 Flux applies the `gitops/` paths as separate Kustomizations with explicit
@@ -247,6 +249,14 @@ A few smaller choices:
 | `TenantQuotaNearlyFull` / `GatewayHighErrorRate` | Carry a `tenant` label for routing to the owning team; quota changes go through the team's `tenant.yaml` |
 | Who changed or deleted something | Log Analytics: `AKSAuditAdmin \| where ObjectRef has "<name>" \| project TimeGenerated, User, Verb, ObjectRef`; Key Vault access is in `AzureDiagnostics` with `ResourceProvider == "MICROSOFT.KEYVAULT"` |
 | Something in Git is not in the cluster | `flux get kustomizations` and `flux get helmreleases -A`: the first failing item blocks the ones that depend on it |
+
+## Hands-on labs
+
+`labs/` holds the small, one-resource-per-script labs I use to rehearse the building blocks:
+hub-spoke networking, private endpoints with private DNS, data-plane RBAC, a minimal Entra-only
+AKS cluster, workload identity to storage through a private endpoint, and the Istio add-on
+(STRICT mTLS, canary, fault injection, authorization). Each script notes the portal path and the
+AWS equivalent. They were run by hand and torn down; see [labs/README.md](labs/README.md).
 
 ## License
 
