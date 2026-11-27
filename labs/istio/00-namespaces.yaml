@@ -1,0 +1,14 @@
+# shop: IN the mesh. The AKS add-on injects by revision label istio.io/rev=<revision>;
+# istio-injection=enabled does NOT work with the add-on. New pods here get the asm-1-30 sidecar.
+# legacy: OUTSIDE the mesh (no sidecar), standing in for an old service.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: shop
+  labels:
+    istio.io/rev: asm-1-30
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: legacy
