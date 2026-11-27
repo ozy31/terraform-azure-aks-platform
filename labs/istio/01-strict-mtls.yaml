@@ -1,0 +1,10 @@
+# Only mTLS traffic (from pods with a sidecar) is accepted in shop.
+# Check first: curl from legacy works under PERMISSIVE and fails with a reset under STRICT.
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: shop
+spec:
+  mtls:
+    mode: STRICT

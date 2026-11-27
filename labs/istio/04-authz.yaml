@@ -1,0 +1,14 @@
+# Only the shop/curl service account may call helloworld (zero trust, identity from the mTLS certificate).
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: helloworld-allow-curl
+  namespace: shop
+spec:
+  selector:
+    matchLabels: { app: helloworld }
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/shop/sa/curl"]

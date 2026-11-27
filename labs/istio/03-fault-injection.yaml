@@ -1,0 +1,13 @@
+# 50% of requests to v2 return 503: what would a broken canary look like?
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: helloworld
+  namespace: shop
+spec:
+  hosts: [helloworld]
+  http:
+    - fault:
+        abort: { percentage: { value: 50 }, httpStatus: 503 }
+      route:
+        - destination: { host: helloworld, subset: v2 }

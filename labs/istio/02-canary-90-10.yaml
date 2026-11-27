@@ -1,0 +1,33 @@
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: helloworld
+  namespace: shop
+spec:
+  host: helloworld
+  subsets:
+    - name: v1
+      labels: { version: v1 }
+    - name: v2
+      labels: { version: v2 }
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: helloworld
+  namespace: shop
+spec:
+  hosts: [helloworld]
+  http:
+    - match:                      # testers always get v2 with a header
+        - headers:
+            x-canary: { exact: "true" }
+      route:
+        - destination: { host: helloworld, subset: v2 }
+    - route:                      # everyone else: 90% v1, 10% v2
+        - destination: { host: helloworld, subset: v1 }
+          weight: 90
+        - destination: { host: helloworld, subset: v2 }
+          weight: 10
+      retries: { attempts: 2, perTryTimeout: 2s, retryOn: "5xx,reset,connect-failure" }
+      timeout: 5s
